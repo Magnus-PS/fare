@@ -1,0 +1,46 @@
+{
+  "STYLES": {
+    "clean": {"label":"Clean, no style","note":"Everything in the catalog that fits your restrictions."},
+    "paleo": {"label":"Paleo","ex":["grain","legume","dairy","soy"],"note":"No grains, legumes, dairy or soy."},
+    "keto": {"label":"Keto","ex":["grain","legume","starchy","fruit"],"maxCarb":20,"note":"Very low carb: about 20 g of carbs or less per dinner. No grains, legumes, starchy vegetables or most fruit."},
+    "animal": {"label":"Animal-based","allow":["animal","fruit","avocado","squash","aromatic"],"note":"Meat, fish, eggs and dairy with fruit and a few gentle plants. No grains, legumes or most vegetables."},
+    "whole30": {"label":"Whole30","ex":["grain","legume","dairy","soy"],"note":"No grains, legumes, dairy, soy or added sugar. Our catalog has no added sugar."},
+    "slowcarb": {"label":"Slow-Carb","ex":["grain","starchy","fruit","dairy"],"note":"No \"white\" carbs, fruit or dairy. Beans, meat and vegetables instead."},
+    "custom": {"label":"Custom","note":"Choose what to leave out."}
+  },
+  "COMPONENTS": [
+    ["grain","Grains"],
+    ["legume","Legumes"],
+    ["dairy","Dairy"],
+    ["soy","Soy"],
+    ["starchy","Starchy veg"],
+    ["fruit","Fruit"],
+    ["redmeat","Red meat"],
+    ["shellfish","Shellfish"]
+  ],
+  "PORTIONS": [
+    [0.5,"Small child (0.5×)"],
+    [0.67,"Child (0.67×)"],
+    [1,"Standard (1×)"],
+    [1.33,"Hungry (1.33×)"],
+    [1.67,"Large or training (1.67×)"]
+  ],
+  "GOALS": [
+    ["muscle","Gain muscle"],
+    ["lose","Lose weight"],
+    ["cheap","Eat healthy for less"],
+    ["simple","Simpler meals"],
+    ["fun","More fun meals"]
+  ],
+  "GOAL_TAGS": {
+    "muscle": {"protein":2},
+    "lose": {"lean":2},
+    "cheap": {"budget":2},
+    "simple": {"simple":1.5,"quick":1},
+    "fun": {"fun":2}
+  },
+  "RESTR": [
+    ["dairy","Dairy-free",["dairy"]],
+    ["gluten","Gluten-free",["gluten"]]
+  ]
+}
