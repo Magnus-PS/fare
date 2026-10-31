@@ -76,6 +76,7 @@ label.chip:has(input:checked){background:var(--accent-soft);border-color:var(--a
 .rule{display:inline-block;font:600 11.5px/1.2 var(--body);padding:3px 8px;border-radius:999px;white-space:nowrap}
 .r-org{color:var(--org);background:var(--org-bg)} .r-c15{color:var(--c15);background:var(--c15-bg)}
 .r-wild{color:var(--wild);background:var(--wild-bg)} .r-past{color:var(--past);background:var(--past-bg)}
+.r-flag{color:var(--warn);background:var(--warn-bg)}
 .guides{display:grid;gap:8px;margin:0;padding:0;list-style:none}
 .guides li{display:grid;grid-template-columns:18px 1fr;gap:8px}
 .guides li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:8px;margin-left:4px}
@@ -125,6 +126,10 @@ tr.pick td{background:var(--accent-soft)}
 .item .nm{font-weight:600;min-width:0}
 .item .qty{font:13px var(--mono);color:var(--muted);margin-left:6px;font-weight:400}
 .item .wh{grid-column:1/-1;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.item .pr{font:13px var(--mono);color:var(--ink)}
+.r-price{color:var(--muted);background:var(--line)}
+.pedit{grid-column:1/-1;display:grid;gap:10px;padding:12px;margin-top:6px;border:1px solid var(--line);border-radius:8px}
+.pedit .err{color:var(--warn);font-size:13px;margin:0}
 .cat{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding-top:14px}
 .fb-btn{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .fb{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:20;width:min(360px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:grid;gap:10px}
@@ -177,7 +182,7 @@ tr.tot td{font-weight:600;border-top:2px solid var(--ink);border-bottom:0}
 </header>
 
 <div class="wrap">
-  <p class="note">Prototype: sample household, mock recipes and illustrative prices. Nothing leaves this browser.</p>
+  <p class="note">Prototype: sample household and sample recipes alongside your own. Prices are estimates until a receipt replaces them. Nothing leaves this browser.</p>
   <main>
     <p class="learned" id="boot-msg">Loading…</p>
     <section id="view-profile" hidden></section>
@@ -198,13 +203,13 @@ tr.tot td{font-weight:600;border-top:2px solid var(--ink);border-bottom:0}
 
 <script>
 // Catalog and config load from data/*.json at boot (see boot() below)
-let STORES,RULES,ING,RECIPES,BREAKFASTS,ATTR,COOK,STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR;
+let STORES,RULES,ING,PRICES,EST,RECIPES,BREAKFASTS,ATTR,COOK,CONV,FLAGS,ING_FLAGS,STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR;
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const KEY='fare-poc-v3';
 const DEFAULT={profile:{style:'batch',eat:'clean',customEx:[],dinners:5,breakfast:true,goals:['muscle','cheap'],restrictions:[],
   members:[{name:'Me',portion:1.67,weight:180},{name:'Partner',portion:1,weight:null},{name:'Daughter',portion:0.67,weight:null}]},
-  plan:null,flex:'new',flexNew:null,approved:false,likes:[],dislikes:[],custom:{},shop:{stores:['tj','wf','costco','kroger'],loyal:'',stopValue:8},priceView:'meal',feedback:[],view:'plan'};
+  plan:null,flex:'new',flexNew:null,approved:false,likes:[],dislikes:[],custom:{},manual:{},shop:{stores:['traderjoes','costco','wildfork','shoprite'],loyal:'',stopValue:8},priceView:'meal',feedback:[],view:'plan'};
 let S;
 try{S=Object.assign(structuredClone(DEFAULT),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=structuredClone(DEFAULT)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -219,7 +224,8 @@ const portionsTxt=n=>(Math.round(n*10)/10).toString();
 const portions=()=>S.profile.members.reduce((s,m)=>s+(+m.portion||0),0)||1;
 const isBatch=()=>S.profile.style==='batch';
 const batchSize=()=>Math.max(4,Math.ceil(portions()*2));
-const recipePortions=id=>isBatch()&&S.plan.includes(id)?batchSize():portions();
+// A batch cooks the recipe's full yield (serves) when that covers the household's batch size.
+const recipePortions=id=>isBatch()&&S.plan.includes(id)?Math.max(batchSize(),R(id).serves||0):portions();
 
 function banned(){const b=new Set();S.profile.restrictions.forEach(k=>{const r=RESTR.find(x=>x[0]===k);if(r)r[2].forEach(x=>b.add(x))});return b}
 function styleOk(ingIds,carbs){
@@ -235,6 +241,7 @@ function hash(s){let h=7;for(const c of s)h=(h*31+c.charCodeAt(0))%997;return h/
 function score(r){
   let s=1;S.profile.goals.forEach(g=>Object.entries(GOAL_TAGS[g]).forEach(([t,w])=>{if(r.tags.includes(t))s+=w}));
   if(S.likes.includes(r.id))s+=1.5;
+  if(!r.sample)s+=3; // your own recipes before the prototype's samples
   return s+hash(r.id+S.profile.goals.join())*0.5;
 }
 const protein=r=>Object.keys(r.ing)[0];
@@ -276,9 +283,32 @@ const freshNight=()=>isBatch()&&S.flex==='new'&&S.flexNew;
 const dinnerIds=()=>[...S.plan,...(freshNight()?[S.flexNew]:[])];
 
 // Recipe rows: catalog ingredients (priced) plus anything the person added. Amounts stored per standard portion.
+// Recipes written in kitchen units ("2 tbsp") become packs per standard portion at boot.
+const MEASURE={tsp:['v',1],tbsp:['v',3],cup:['v',48],oz:['w',1],lb:['w',16]};
+function toPacks(id,qty,unit){
+  const conv={...(CONV[id]||{})};if(COOK[id]&&!conv[COOK[id][1]])conv[COOK[id][1]]=COOK[id][0];
+  if(conv[unit])return qty/conv[unit];
+  const m=MEASURE[unit],k=m&&Object.keys(conv).find(k=>MEASURE[k]&&MEASURE[k][0]===m[0]);
+  if(k)return qty*m[1]/(MEASURE[k][1]*conv[k]);
+  throw new Error(`can't convert ${unit} of ${id}; add it to CONV.${id} in catalog.json`);
+}
+function prepRecipe(r){
+  if(!r.items)return;
+  r.ing={};r.pantry=[];
+  r.items.forEach(it=>{
+    if(it.pantry){r.pantry.push({name:it.name,unit:it.unit,per:it.qty/r.serves});return}
+    if(!ING[it.id])throw new Error(`${r.id} uses unknown ingredient ${it.id}`);
+    r.ing[it.id]=(r.ing[it.id]||0)+toPacks(it.id,it.qty,it.unit)/r.serves;
+  });
+}
+// Cautions on items outside our sourcing rules (processed meat, not organic, check the label)
+const flagsOf=id=>(ING_FLAGS[id]||[]).map(f=>FLAGS[f]).filter(Boolean);
+const flagChips=id=>flagsOf(id).map(f=>`<span class="rule r-flag" title="${esc(f.why)}">${esc(f.label)}</span>`).join(' ');
+const noteFor=(r,id)=>((r.items||[]).find(it=>it.id===id)||{}).note||'';
+
 function rowsFor(id){
   if(S.custom[id])return S.custom[id];
-  return Object.entries(R(id).ing).map(([k,q])=>({id:k,per:q,note:''}));
+  return Object.entries(R(id).ing).map(([k,q])=>({id:k,per:q,note:noteFor(R(id),k)}));
 }
 function rowView(row,n){
   if(row.id){const [a,u]=COOK[row.id];return {name:ING[row.id][0],amt:row.per*n*a,unit:u}}
@@ -303,25 +333,52 @@ function groceries(){
   return {items,extras};
 }
 const sIdx=id=>STORES.findIndex(s=>s.id===id);
-const unitPrice=(id,sid)=>ING[id][4][sIdx(sid)];
-function priceAt(item,sid){const p=unitPrice(item.id,sid);return p==null?null:p*item.packs}
+// Price ladder: a real price at the store (receipt or typed), else the store-less estimate, else unpriced.
+// A store's real price is the newer of its receipt price (data/prices.json) and a shelf price typed here (S.manual).
+const realPrice=(id,sid)=>{const r=(PRICES[id]||{})[sid],m=(S.manual[id]||{})[sid];return m&&(!r||m.observed_on>=r.observed_on)?m:r||null};
+// "24 ct" vs "dozen" -> 2; null when the units can't be compared (same rules as tools/receipt-lib.mjs)
+function packOf(s){const m=String(s||'').toLowerCase().match(/^\s*(\d+(?:\.\d+)?)?\s*(fl oz|[a-z]+)/);if(!m)return null;
+  let n=m[1]?+m[1]:1,u={lbs:'lb',pound:'lb',ounce:'oz',count:'ct',each:'ct',ea:'ct',doz:'dozen'}[m[2]]||m[2];if(u==='dozen'){n*=12;u='ct'}return {n,u}}
+function packRatio(a,b){a=packOf(a);b=packOf(b);if(!a||!b)return null;if(a.u===b.u)return a.n/b.n;const W={oz:1,lb:16};return W[a.u]&&W[b.u]?a.n*W[a.u]/(b.n*W[b.u]):null}
+let editP=null;
+const lineCost=it=>it.each==null?0:it.each*it.packs;
+const isEst=it=>!!it.src&&it.src.provenance==='estimate';
+function srcLabel(it){
+  if(!it.src)return 'Not priced yet';
+  if(isEst(it))return it.src.basis?`Estimate · ${STORES[sIdx(it.src.basis)].name} price`:'Estimate';
+  const l={receipt:'Receipt',manual:'Logged',store_api:'Store listing'}[it.src.provenance]||'Price';
+  return it.src.observed_on?l+' · '+fmtDate(new Date(it.src.observed_on+'T12:00')):l;
+}
+const carries=(sid,it)=>{const c=STORES[sIdx(sid)].carries;return !c||c.includes(it.d[1])};
+// Price for an item no store in the set has a real price for: the cheapest real price at any of your stores,
+// else the store-less estimate. A placeholder never undercuts what you've actually paid.
+function fallback(it){
+  let b=null;for(const s of S.shop.stores){const p=realPrice(it.id,s);if(p&&(!b||p.price<b.price))b={price:p.price,s}}
+  if(b)return {each:b.price,src:{provenance:'estimate',basis:b.s}};
+  const e=EST[it.id];return {each:e?e.price:null,src:e?{provenance:'estimate'}:null};
+}
 // Every combination of the user's stores; score = cost + (value of a stop) x extra stops.
+// Stores compete on real prices; other items ride along at the set's main store for their aisle.
 function routes(items){
   const ids=S.shop.stores,out=[];
-  for(let m=1;m<(1<<ids.length);m++){
+  const realCount=sid=>items.filter(it=>realPrice(it.id,sid)).length;
+  const byReal=[...ids].sort((a,b)=>realCount(b)-realCount(a));
+  next: for(let m=1;m<(1<<ids.length);m++){
     const set=ids.filter((_,i)=>m&(1<<i));
     if(S.shop.loyal&&!set.includes(S.shop.loyal))continue;
-    let cost=0,ok=true;const assign={};
+    let cost=0;const assign={};
     for(const it of items){
-      let best=null;for(const s of set){const p=priceAt(it,s);if(p!=null&&(best==null||p<best.p))best={s,p}}
-      if(!best){ok=false;break}cost+=best.p;assign[it.id]=best.s;
+      const at=set.filter(s=>carries(s,it));
+      if(!at.length)continue next; // nobody in this set stocks this aisle
+      let best=null;for(const s of at){const p=realPrice(it.id,s);if(p&&(best==null||p.price<best.each))best={s,each:p.price,src:p}}
+      if(!best)best={s:at.includes(S.shop.loyal)?S.shop.loyal:byReal.find(s=>at.includes(s)),...fallback(it)};
+      if(best.each!=null)cost+=best.each*it.packs;assign[it.id]=best;
     }
-    if(!ok)continue;
-    const used=[...new Set(Object.values(assign))];
+    const used=[...new Set(Object.values(assign).map(a=>a.s))];
     if(used.length<set.length)continue; // a store with nothing assigned is not a real stop
     out.push({set,cost,assign,stops:used.length,score:cost+S.shop.stopValue*(used.length-1)});
   }
-  return out.sort((a,b)=>a.score-b.score);
+  return out.sort((a,b)=>a.score-b.score||a.stops-b.stops);
 }
 function weekOf(){const d=new Date();const add=(8-d.getDay())%7||7;d.setDate(d.getDate()+add);return d}
 function fmtDate(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}
@@ -406,7 +463,7 @@ function guidelines(meals){
   return g;
 }
 
-const mealMeta=r=>`<div class="meta">Est. per standard portion: ${r.kcal} kcal · P ${r.p} g · C ${r.c} g · F ${r.f} g · ${r.mins} min</div>
+const mealMeta=r=>`${r.sample?'<span class="tag">Sample recipe</span>':''}<div class="meta">Est. per standard portion: ${r.kcal} kcal · P ${r.p} g · C ${r.c} g · F ${r.f} g · ${r.mins} min</div>
         <div class="row" style="gap:6px">${r.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
 const mealActs=(i,r)=>{const liked=S.likes.includes(r.id);return `<div class="acts">
           <button class="btn small" data-act="like" data-i="${i}" aria-pressed="${liked}">${liked?'Liked':'Like'}</button>
@@ -420,12 +477,13 @@ function ingHTML(r){
     <summary>Ingredients for ${portionsTxt(n)} portions${edited?' · your version':''}</summary>
     <div class="tablewrap"><table class="ingt"><thead><tr><th>Ingredient</th><th class="num">Amount</th><th>Unit</th><th>Note</th><th><span class="sr">Remove</span></th></tr></thead><tbody>
     ${rows.map((row,i)=>{const v=rowView(row,n);return `<tr>
-      <td>${row.id?esc(v.name):`<input type="text" aria-label="Ingredient name" data-rid="${r.id}" data-row="${i}" data-f="name" value="${esc(v.name)}">`}</td>
+      <td>${row.id?esc(v.name)+(flagsOf(row.id).length?' '+flagChips(row.id):''):`<input type="text" aria-label="Ingredient name" data-rid="${r.id}" data-row="${i}" data-f="name" value="${esc(v.name)}">`}</td>
       <td class="num"><input type="number" min="0" step="0.25" aria-label="Amount of ${esc(v.name)}" data-rid="${r.id}" data-row="${i}" data-f="amt" value="${num(v.amt)}"></td>
       <td>${row.id?esc(v.unit):`<input type="text" aria-label="Unit" class="unit" data-rid="${r.id}" data-row="${i}" data-f="unit" value="${esc(v.unit)}">`}</td>
       <td><input type="text" aria-label="Note for ${esc(v.name)}" data-rid="${r.id}" data-row="${i}" data-f="note" value="${esc(row.note||'')}" placeholder="e.g. extra spicy"></td>
       <td><button class="btn small" data-delrow="${i}" data-rid="${r.id}" aria-label="Remove ${esc(v.name)}">×</button></td></tr>`}).join('')}
     </tbody></table></div>
+    ${r.pantry&&r.pantry.length?`<p class="hint" style="margin:8px 0 0">From your pantry, not on the list: ${r.pantry.map(x=>`${num(x.per*n)} ${esc(x.unit)} ${esc(x.name)}`).join(', ')}.</p>`:''}
     <div class="row" style="margin-top:8px"><button class="btn small" data-addrow="${r.id}">Add ingredient</button><button class="btn small" data-dlrec="${r.id}">Download CSV</button><button class="btn small" data-cprec="${r.id}">Copy</button>${edited?`<button class="btn small" data-reset="${r.id}">Reset to original</button>`:''}</div>
     <p class="hint" style="margin:6px 0 0">Edits change this week's grocery list and stay with the recipe for next time. Amounts scale with your portions.</p>
   </details>`;
@@ -444,7 +502,7 @@ function batchHTML(meals,wk){
   const total=Math.round((meals.reduce((s,r)=>s+r.mins,0)*0.75+15)/5)*5;
   const flexR=S.flexNew?R(S.flexNew):null,f=FLEX[S.flex];
   return `
-  <div class="card cookday"><div class="spread"><div><p class="label">Cook day · Sun ${fmtDate(dayDate(wk,-1))}</p><h3>About ${total} minutes, ${meals.length*bs} portions</h3></div><span class="tag">Run the oven and stovetop side by side</span></div>
+  <div class="card cookday"><div class="spread"><div><p class="label">Cook day · Sun ${fmtDate(dayDate(wk,-1))}</p><h3>About ${total} minutes, ${meals.reduce((s,r)=>s+recipePortions(r.id),0)} portions</h3></div><span class="tag">Run the oven and stovetop side by side</span></div>
     <p class="learned" style="margin:8px 0 0">Each batch is ${bs} portions: two dinners of ${portionsTxt(P)}${bs>P*2+0.5?', plus a little extra for lunch':''}. Mon to Wed come from the fridge; freeze the Thu to Sat portions.</p></div>
   <div class="meals">${meals.map((r,i)=>{const nights=BATCH_NIGHTS.map((b,j)=>b===i?DAYS[j]:null).filter(Boolean);return`
     <article class="meal ${S.likes.includes(r.id)?'liked':''}">
@@ -522,10 +580,12 @@ function renderList(){
       <div class="field"><label for="loyal">Always include</label><select id="loyal"><option value="">No favourite store</option>${STORES.filter(s=>sh.stores.includes(s.id)).map(s=>`<option value="${s.id}" ${sh.loyal===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
     </div></div>`;
   if(!best){
-    $('#view-list').innerHTML=`<div><h2>Grocery list</h2></div>${controls}<div class="card"><p class="empty" style="margin:0">Your selected stores don't carry everything on this list. Add another store.</p></div>`;
+    $('#view-list').innerHTML=`<div><h2>Grocery list</h2></div>${controls}<div class="card"><p class="empty" style="margin:0">Pick at least one store.</p></div>`;
     bindShop();return;
   }
-  items.forEach(it=>it.store=best.assign[it.id]);
+  items.forEach(it=>{const a=best.assign[it.id];it.store=a.s;it.each=a.each;it.src=a.src});
+  const byId=Object.fromEntries(items.map(it=>[it.id,it]));
+  const estCost=items.filter(isEst).reduce((s,it)=>s+lineCost(it),0),unpriced=items.filter(it=>!it.src).length;
   const oneStop=rs.filter(r=>r.stops===1).sort((a,b)=>a.cost-b.cost)[0];
   const cheapest=[...rs].sort((a,b)=>a.cost-b.cost)[0];
   const bySize={};rs.forEach(r=>{if(!bySize[r.stops]||r.cost<bySize[r.stops].cost)bySize[r.stops]=r});
@@ -539,15 +599,15 @@ function renderList(){
   const LH=['Store','Aisle','Item','Quantity','Pack','How to buy'];
 
   // Price breakdown: what each meal uses (fractional) vs what you buy (whole packs).
-  const usedCost=(id,q)=>q*unitPrice(id,best.assign[id]);
+  const usedCost=(id,q)=>q*(byId[id].each||0);
   const mealRows=dinnerIds().map((id,i)=>{const n=recipePortions(id);const c=rowsFor(id).filter(r=>r.id).reduce((s,r)=>s+usedCost(r.id,r.per*n),0);
     return {label:(isBatch()&&i<S.plan.length?'Batch '+'ABC'[i]+': ':(isBatch()?'Flex: ':''))+R(id).name,portions:n,cost:c}});
   if(bf)mealRows.push({label:'Breakfast: '+bf.name,portions:bfPortions,cost:Object.entries(bf.ing).reduce((s,[k,q])=>s+usedCost(k,q*P*7),0)});
   const usedTotal=mealRows.reduce((s,r)=>s+r.cost,0),left=best.cost-usedTotal;
   const pv=S.priceView;
-  const priceBody=pv==='item'?`<div class="tablewrap"><table><thead><tr><th>Item</th><th>Store</th><th class="num">Buy</th><th class="num">Each</th><th class="num">Total</th></tr></thead><tbody>
-      ${[...items].sort((a,b)=>priceAt(b,b.store)-priceAt(a,a.store)).map(it=>`<tr><td>${esc(it.d[0])}</td><td>${esc(STORES[sIdx(it.store)].name)}</td><td class="num">${it.packs} × ${esc(it.d[2])}</td><td class="num">${money(unitPrice(it.id,it.store))}</td><td class="num">${money(priceAt(it,it.store))}</td></tr>`).join('')}
-      <tr class="tot"><td colspan="4">Plan total</td><td class="num">${money(best.cost)}</td></tr></tbody></table></div>`
+  const priceBody=pv==='item'?`<div class="tablewrap"><table><thead><tr><th>Item</th><th>Store</th><th>Price from</th><th class="num">Buy</th><th class="num">Each</th><th class="num">Total</th></tr></thead><tbody>
+      ${[...items].sort((a,b)=>lineCost(b)-lineCost(a)).map(it=>`<tr><td>${esc(it.d[0])}</td><td>${esc(STORES[sIdx(it.store)].name)}</td><td>${srcLabel(it)}</td><td class="num">${it.packs} × ${esc(it.d[2])}</td><td class="num">${it.each==null?'—':money(it.each)}</td><td class="num">${it.each==null?'—':money(lineCost(it))}</td></tr>`).join('')}
+      <tr class="tot"><td colspan="5">Plan total</td><td class="num">${money(best.cost)}</td></tr></tbody></table></div>`
     :pv==='meal'?`<div class="tablewrap"><table><thead><tr><th>${isBatch()?'Batch or meal':'Meal'}</th><th class="num">Portions</th><th class="num">Cost</th><th class="num">Per portion</th></tr></thead><tbody>
       ${mealRows.map(r=>`<tr><td>${esc(r.label)}</td><td class="num">${portionsTxt(r.portions)}</td><td class="num">${money(r.cost)}</td><td class="num">${money(r.cost/r.portions)}</td></tr>`).join('')}
       <tr><td>Left over for next week (partly used packs)</td><td class="num"></td><td class="num">${money(left)}</td><td class="num"></td></tr>
@@ -559,12 +619,12 @@ function renderList(){
         <div><b>${money(best.cost/7)}</b><span>per day for the household</span></div>
       </div>
       <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Store</th><th class="num">Items</th><th class="num">Subtotal</th></tr></thead><tbody>
-      ${storeOrder.map(([sid,its])=>`<tr><td>${esc(STORES[sIdx(sid)].name)}</td><td class="num">${its.length}</td><td class="num">${money(its.reduce((s,it)=>s+priceAt(it,sid),0))}</td></tr>`).join('')}</tbody></table></div>`;
+      ${storeOrder.map(([sid,its])=>`<tr><td>${esc(STORES[sIdx(sid)].name)}</td><td class="num">${its.length}</td><td class="num">${money(its.reduce((s,it)=>s+lineCost(it),0))}</td></tr>`).join('')}</tbody></table></div>`;
 
   $('#view-list').innerHTML=`
   <div><h2>Grocery list</h2><p class="lede">${items.length} items for ${isBatch()?`${S.plan.length} batch recipes covering 6 dinners${freshNight()?' and a fresh Sunday dinner':''}`:`${S.plan.length} dinners`}${bf?', plus 7 breakfasts':''}, sized for ${portionsTxt(P)} portions a meal.</p></div>
   <div class="card"><div class="summary">
-    <div><b>${money(best.cost)}</b><span>estimated total</span></div>
+    <div><b>${money(best.cost)}</b><span>total${estCost>0.005?`, ${money(estCost)} of it estimated`:''}${unpriced?` · ${unpriced} item${unpriced>1?'s':''} not priced yet`:''}</span></div>
     <div><b>${best.stops}</b><span>${best.stops===1?'stop':'stops'}: ${esc(names(best.set))}</span></div>
     <div><b>${money(best.cost/allPortions)}</b><span>per portion</span></div>
     <div><b>${saved!=null&&saved>0.005?money(saved):'—'}</b><span>${saved!=null&&saved>0.005?'saved vs best single store':oneStop?'already the best single store':'no single store has it all'}</span></div>
@@ -579,15 +639,19 @@ function renderList(){
   ${storeOrder.map(([sid,its])=>`<div class="card store"><div class="store-head"><h3>${esc(STORES[sIdx(sid)].name)}</h3><div class="row"><span class="learned">${its.length} items</span><button class="btn small" data-dlstore="${sid}">Download</button><button class="btn small" data-cpstore="${sid}">Copy</button></div></div>
     ${catOrder.filter(c=>its.some(it=>it.d[1]===c)).map(c=>`<div class="cat">${c}</div>`+its.filter(it=>it.d[1]===c).map(it=>{const ru=RULES[it.d[3]];return`
       <div class="item"><div class="nm">${esc(it.d[0])}<span class="qty">${it.packs} × ${esc(it.d[2])}</span></div>
-      <div class="wh"><span class="rule ${ru.cls}">${ru.label}</span><span>${esc(ru.why)}</span></div></div>`}).join('')).join('')}
+      <button class="btn small" data-editp="${it.id}" aria-expanded="${editP===it.id}">Edit price</button>
+      <div class="wh"><span class="rule r-price">${srcLabel(it)}</span>${it.each==null?'':`<span class="pr">${money(it.each)} per ${esc(it.d[2])}</span>`}</div>
+      <div class="wh"><span class="rule ${ru.cls}">${ru.label}</span><span>${esc(ru.why)}</span></div>
+      ${flagsOf(it.id).map(f=>`<div class="wh"><span class="rule r-flag">${esc(f.label)}</span><span>${esc(f.why)}</span></div>`).join('')}
+      ${editP===it.id?priceForm(it):''}</div>`}).join('')).join('')}
   </div>`).join('')}
   ${extras.length?`<div class="card store"><div class="store-head"><h3>Added by you</h3><span class="learned">Not priced yet</span></div>${extras.map(e=>`<div class="item"><div class="nm">${esc(e.name)}<span class="qty">${num(e.amt)} ${esc(e.unit)}</span></div><div class="wh"><span>For ${esc(e.recipe)}</span></div></div>`).join('')}</div>`:''}
 
   <div class="sechead"><h2>Price breakdown</h2><div class="seg" role="group" aria-label="Price breakdown level">${[['item','By item'],['meal',isBatch()?'By batch':'By meal'],['plan','Plan total']].map(([k,l])=>`<button class="btn small" data-pv="${k}" aria-pressed="${pv===k}">${l}</button>`).join('')}</div></div>
   <div class="card">${priceBody}
-    <p class="hint" style="margin:12px 0 0">Estimates from illustrative prices. Meal costs count only what each recipe uses; the rest of a pack carries into next week. As you upload receipts, real prices replace these item by item, so you can see where the savings are.</p></div>
+    <p class="hint" style="margin:12px 0 0">Real prices come from your receipts; anything else is a labelled estimate, and items with no price yet are left out of the totals. Meal costs count only what each recipe uses; the rest of a pack carries into next week. Each receipt you log replaces estimates item by item, and you can log a shelf price yourself with Edit price on any item.</p></div>
   <p class="learned">Assumes olive oil, salt and spices are in the pantry.</p>`;
-  bindShop();
+  bindShop();bindPrices();
   const allIts=storeOrder.flatMap(([,its])=>its);
   const extraRows=extras.map(e=>['Any','Added by you',e.name,num(e.amt),e.unit,'For '+e.recipe]);
   $('#dl-all').onclick=()=>saveFile('fare-grocery-list.csv',toCSV([LH,...listRows(allIts),...extraRows]));
@@ -595,6 +659,36 @@ function renderList(){
   document.querySelectorAll('[data-dlstore]').forEach(b=>b.onclick=()=>{const sid=b.dataset.dlstore;saveFile('fare-'+slug(STORES[sIdx(sid)].name)+'.csv',toCSV([LH,...listRows(groups[sid])]))});
   document.querySelectorAll('[data-cpstore]').forEach(b=>b.onclick=()=>{const sid=b.dataset.cpstore;copyText(listText(STORES[sIdx(sid)].name.toUpperCase(),groups[sid]))});
   document.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{S.priceView=b.dataset.pv;save();render()});
+}
+// Log a shelf price for one item: saved in this browser as "Logged · date", converted to the catalog pack.
+function priceForm(it){
+  const ms=S.manual[it.id]||{},sid=ms[it.store]?it.store:Object.keys(ms)[0]||it.store,mine=ms[sid];
+  return `<form class="pedit" data-pform="${it.id}">
+    <div class="fields">
+      <div class="field"><label for="pf-store">Store</label><select id="pf-store" name="store">${STORES.map(s=>`<option value="${s.id}" ${s.id===sid?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="pf-price">Price</label><input id="pf-price" name="price" type="number" min="0" step="0.01" inputmode="decimal" value="${mine?mine.entered.price:''}" placeholder="0.00" required></div>
+      <div class="field"><label for="pf-pack">For this pack size</label><input id="pf-pack" name="pack" type="text" value="${esc(mine?mine.entered.pack:it.d[2])}"><div class="hint">Fare compares per ${esc(it.d[2])}. Use lb, oz or a count.</div></div>
+    </div>
+    <p class="err" role="alert"></p>
+    <div class="row"><button class="btn small primary">Save price</button><button type="button" class="btn small" data-pcancel>Cancel</button>${mine?'<button type="button" class="btn small" data-pclear>Remove my price</button>':''}</div>
+  </form>`;
+}
+function bindPrices(){
+  document.querySelectorAll('[data-editp]').forEach(b=>b.onclick=()=>{editP=editP===b.dataset.editp?null:b.dataset.editp;render()});
+  const f=document.querySelector('[data-pform]');if(!f)return;
+  const id=f.dataset.pform,catPack=ING[id][2];
+  f.querySelector('[data-pcancel]').onclick=()=>{editP=null;render()};
+  const clr=f.querySelector('[data-pclear]');
+  if(clr)clr.onclick=()=>{delete S.manual[id][f.store.value];save();editP=null;render()};
+  f.onsubmit=e=>{
+    e.preventDefault();
+    const price=+f.price.value,pack=f.pack.value.trim()||catPack,ratio=packRatio(pack,catPack);
+    if(!(price>0)){f.querySelector('.err').textContent='Enter the price on the shelf tag.';return}
+    if(!ratio){f.querySelector('.err').textContent=`Can't compare "${pack}" with ${catPack}. Use lb, oz or a count, like "2 lb" or "24 ct".`;return}
+    (S.manual[id]=S.manual[id]||{})[f.store.value]={price:Math.round(price/ratio*100)/100,provenance:'manual',observed_on:new Date().toLocaleDateString('en-CA'),entered:{price,pack}};
+    editP=null;save();render();toast('Price saved');
+  };
+  f.price.focus();
 }
 function bindShop(){
   document.querySelectorAll('input[name=store]').forEach(c=>c.onchange=()=>{
@@ -622,9 +716,15 @@ renderFb();
 
 async function boot(){
   try{
-    const [cat,cfg]=await Promise.all(['data/catalog.json','data/config.json'].map(async u=>{const r=await fetch(u);if(!r.ok)throw new Error(u+': '+r.status);return r.json()}));
-    ({STORES,RULES,ING,RECIPES,BREAKFASTS,ATTR,COOK}=cat);
+    const [cat,cfg,pr,est]=await Promise.all(['data/catalog.json','data/config.json','data/prices.json','data/estimates.json'].map(async u=>{const r=await fetch(u);if(!r.ok)throw new Error(u+': '+r.status);return r.json()}));
+    ({STORES,RULES,ING,RECIPES,BREAKFASTS,ATTR,COOK}=cat);CONV=cat.CONV||{};FLAGS=cat.FLAGS||{};ING_FLAGS=cat.ING_FLAGS||{};
     ({STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR}=cfg);
+    PRICES=pr.prices;EST=est.estimates;
+    RECIPES.forEach(prepRecipe);
+    // Saved state can name ids that were renamed or have left the catalog
+    const RENAMED={tj:'traderjoes',beef:'grdbeef',potatoes:'whitepotatoes'},ren=id=>RENAMED[id]||id;
+    S.shop.stores=[...new Set(S.shop.stores.map(ren))].filter(id=>sIdx(id)>=0);S.shop.loyal=ren(S.shop.loyal);
+    Object.values(S.custom).forEach(rows=>rows.forEach(row=>{if(row.id)row.id=ren(row.id)}));if(sIdx(S.shop.loyal)<0)S.shop.loyal='';
   }catch(e){
     $('#boot-msg').remove();
     $('#view-'+S.view).hidden=false;
