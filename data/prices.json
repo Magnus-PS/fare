@@ -1,0 +1,9 @@
+{
+  "_notes": "Derived by tools/derive-prices.mjs from receipts and typed shelf prices; do not hand-edit. Per ingredient, per store: price per catalog pack, provenance (receipt | manual | store_api) and observed_on.",
+  "prices": {
+    "chthigh": {"wildfork":{"price":6.4,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "chuckroast": {"wildfork":{"price":7.48,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "grdbeef": {"wildfork":{"price":6,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "salmon": {"wildfork":{"price":10.65,"provenance":"receipt","observed_on":"2026-10-30"}}
+  }
+}

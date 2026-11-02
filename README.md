@@ -22,8 +22,12 @@ python3 -m http.server 8000
 | Path | What |
 |---|---|
 | `index.html` | The whole app: markup, styles and JS, with no build step |
-| `data/catalog.json` | Stores, food rules, ingredients and prices, recipes, breakfasts |
+| `data/catalog.json` | Stores, food rules, ingredients, unit conversions, recipes, breakfasts |
+| `data/prices.json` | Real prices from receipts, derived by `tools/derive-prices.mjs` |
+| `data/estimates.json` | Fallback price per ingredient, each with a source |
 | `data/config.json` | Eating styles, goals, portion sizes, restrictions |
+| `tools/`, `tests/` | Receipt logging (`node tools/receipt.mjs`) and its tests (`node --test`) |
 | `docs/PRODUCT.md` | Product brief, principles, roadmap, LLM cost plan |
+| `docs/RECEIPTS.md` | Receipt logging and price sources spec |
 
 Pushing to `main` deploys to GitHub Pages.

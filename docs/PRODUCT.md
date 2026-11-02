@@ -2,13 +2,15 @@
 
 > One place to go each week for what to eat, why to eat it, and where it's cheapest to buy.
 
-Status: ideation, v0.1 (Oct 2026). Owner: Magnus.
+Status: ideation, v0.2 (Oct 2026). Owner: Magnus.
 
 ---
 
 ## 1. Vision
 
 Clean eating with less thought. Every week Fare hands you a meal plan you already mostly agree with, the reasons behind it, a grocery list that only contains food worth buying, and a shopping route that fits how *you* like to shop (one stop, cheapest, or your favourite chain).
+
+Prices come from real receipts wherever possible, and every price says where it came from (receipt, store listing or estimate). See [RECEIPTS.md](RECEIPTS.md).
 
 It starts as Magnus's own weekly routine, systematized. If it saves him an hour a week, it goes to a handful of friends. If it saves them time too, it earns a public version.
 
@@ -31,7 +33,7 @@ It starts as Magnus's own weekly routine, systematized. If it saves him an hour 
 
 ## 2. Product principles
 
-1. **Unhealthy options never appear.** The catalog is curated. If it isn't something we'd recommend, it isn't in the meal plan or the price comparison. No "budget" factory-farmed tier.
+1. **Unhealthy options never appear unlabelled.** The catalog is curated, and Fare's own recommendations stay inside the principles: no "budget" factory-farmed tier. Things you actually buy that fall outside them (processed meat, conventional beef, non-organic cheese, a jarred item to double-check) can be tracked and priced, but always carry a flag with its reason: *Processed meat · in moderation*, *In moderation*, *Not grass-fed*, *Confirm organic*, *Check the label*. Flags live in `data/catalog.json` (`FLAGS`, `ING_FLAGS`).
 2. **Organic by default, conventional when it doesn't matter.** Dirty Dozen and anything not on a list: organic. Clean 15: conventional is fine, and we say so (that's where the savings come from). Meat and fish: wild-caught, pasture-raised, grass-fed.
 3. **Every recommendation has a "why".** One line, plain language, on every meal and every grocery item. Distinguish *evidence* ("Dirty Dozen: highest pesticide residue in USDA testing") from *preference* ("we prefer grass-fed for animal welfare and fat profile"). Credibility is the product.
 4. **Recommend, then listen.** Fare proposes; the person swaps, thumbs-down, or overrides. Every override is a signal that improves next week.
@@ -63,6 +65,8 @@ Profile ──► Proposed plan + guidelines + macros ──► Swap / thumbs / 
 **Eating styles** filter recipe components by ingredient attributes (grain, legume, dairy, soy, starchy, fruit, red meat, shellfish): Clean (none), Paleo, Keto (also ≤ ~20 g carbs per dinner), Animal-based (allow-list: animal foods, fruit, avocado, squash, aromatics), Whole30, Slow-Carb, and Custom (pick components to leave out). Seasonings (garlic, onion, lemon) pass every style.
 
 **Macros** are always labelled as estimated averages per standard portion, with a scaled line per member, because the cut, brand and cooking change real values.
+
+**Recipes are written as you cook them** ("2 tbsp tomato paste", serves 8). Each ingredient has an approximate conversion from its pack to kitchen units (`CONV` in `data/catalog.json`), and code turns recipe amounts into fractions of a pack: meals cost what they use, the list buys whole packs, and the rest carries over. A unit that can't be converted is an error at load, never a guess. Salt, oil and spices are pantry items: shown with the recipe, never listed or priced. In batch mode a recipe cooks its full yield when that covers the household. Prototype recipes are marked `sample` and rank below your own.
 
 **Recipe ingredients** are editable per recipe (amounts, notes, added items) and downloadable as CSV or copyable. Edits are stored per standard portion so they scale, flow into the grocery list (added items show as "added by you, not priced"), and stay with the recipe for next week.
 
@@ -99,7 +103,9 @@ members      (id, user_id, name, portion_multiplier, weight_lb)
 ingredients  (id, name, category, rule, why, pack_label, attributes[], cook_unit, cook_per_pack)
 recipe_edits (user_id, recipe_id, rows jsonb)  -- per-portion amounts, notes, added items          -- curated, seeded from JSON
 recipes      (id, name, batch, keeps, carbs_g, tags[], contains[], minutes, kcal, p, c, f, why, ingredients jsonb)
-prices       (ingredient_id, store_id, price, observed_at, source)  -- mock -> receipts -> APIs
+prices       (ingredient_id, store_id, price, observed_at, source, description, unit_price, receipt_id, line_no,
+              provenance, confidence, on_sale, needs_review, logged_on)  -- receipts first; see RECEIPTS.md
+receipts     (id, user_id, store_id, purchased_at, total, raw_text, file_hash, status)
 plans        (id, user_id, week_of, status, style, recipe_ids[], flex, flex_recipe_id, llm_notes jsonb, cost_est)
 plan_events  (plan_id, type: swap|thumb_up|thumb_down|approve, recipe_id, at)
 feedback     (user_id, screen, text, plan_id, at)
@@ -116,8 +122,11 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 - [x] Clickable POC with mock data (`index.html`): profile, plan with why, swap, approve, grocery list, store routing, feedback box
 - [x] Batch cook mode: 3 recipes over 6 nights plus a flex night (cheat, healthy takeout, or a new recipe)
 - [x] Per-member portion sizes, eating styles, estimated-macro labels, editable recipe ingredients, list downloads, price breakdown by item / meal / plan
-- [ ] Swap the mock catalog for **your real recipes** (the 15 to 25 you actually cook) and **your real stores**
-- [ ] Enter real prices from your last 3 to 4 receipts (a `prices.json`)
+- [x] Real stores: Costco, Trader Joe's, Wild Fork, ShopRite
+- [ ] Swap the mock catalog for **your real recipes** (the 15 to 25 you actually cook). First one in: paleo beef & sausage chili
+- [x] Receipt logging as a local tool (`tools/receipt.mjs`): receipt transcribed in Claude chat to Markdown, then checked and logged to `local/`, with derived prices in `data/prices.json`, provenance labels, store-less estimates as fallback and a local admin view. Spec: [RECEIPTS.md](RECEIPTS.md) section 11
+- [ ] Log your last 3 to 4 receipts with it (1 of 4 logged: Wild Fork, Oct 30)
+- [x] Log shelf prices in the app: "Edit price" on any grocery item, saved in the browser as "Logged · date"
 - [ ] Use it yourself for 2 weeks. Keep a list of every time you went back to the spreadsheet.
 - No backend, no LLM. State in localStorage. Host on GitHub Pages.
 
@@ -127,11 +136,13 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 - LLM plan generation through the Edge Function (Haiku 5.5, structured output, caps)
 - "Why" text written by the LLM, grounded in the rule metadata
 - Weekly email or push: "Your plan for next week is ready" (Supabase cron + Resend free tier)
-- Price logging: tap an item on the list to correct its price at the store you bought it
+- Price logging: sync the shelf prices people log in the app (Phase 0 keeps them in the browser)
+- Receipts in the app: upload to a private bucket, inbound email address, admin-only price view, user export of their own data, Kroger Product API fallback
+- Terms of Service and privacy policy reviewed before friends upload receipts
 
 ### Phase 2: Make it stick
 - Preference learning: summarize swaps and thumbs into a short `prefs` note per user that feeds next week's prompt
-- Receipt photo to prices (Haiku vision, batched overnight at 50% off)
+- Batch receipt parsing overnight at 50% off once uploads are routine
 - Leftovers and "cook once, eat twice" planning; pantry staples you already have
 - PWA manifest and offline list for the store
 - Share a plan or recipe with another user
@@ -187,6 +198,7 @@ So: **default to Haiku 5.5.** Use Sonnet 5.5 only for the one-time onboarding in
 9. **Small context.** Send recipe ids, names and tags, not full ingredient lists. The catalog stays well under 5K tokens until it has hundreds of recipes.
 10. **Batch the non-urgent.** Sunday-night "next week's plan" generation and receipt parsing go through the Message Batches API at 50% off.
 11. **Log every call.** Model, tokens, cache hits, cost. Review weekly in the Supabase table view.
+12. **Spend checkpoints for receipts.** $0.05 cap per document, $1 per day, and a continue-or-pause prompt every $5 of cumulative spend (RECEIPTS.md section 8).
 
 ### The weekly prompt (shape)
 
@@ -239,4 +251,5 @@ EWG republishes each spring; check ewg.org for the current year and update `data
 - Batch cook: should leftovers from a 1-person household's 4-serving batches become planned lunches?
 - Breakfast and lunch: plan them, or just dinners plus a default breakfast? (POC: dinners plus an optional default breakfast.)
 - How strict is "organic unless no proven difference" for items on neither EWG list? (POC: organic preferred.)
+- Receipts: should friends' receipts improve prices for everyone at the same store, and what does the ToS need to say first?
 - Do friends share your stores, or does each user pick stores and enter prices for them? (Affects how fast price data improves.)
