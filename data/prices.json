@@ -1,9 +1,32 @@
 {
   "_notes": "Derived by tools/derive-prices.mjs from receipts and typed shelf prices; do not hand-edit. Per ingredient, per store: price per catalog pack, provenance (receipt | manual | store_api) and observed_on.",
   "prices": {
+    "almondflour": {"costco":{"price":5.5,"provenance":"receipt","observed_on":"2026-10-29"}},
+    "banana": {"traderjoes":{"price":0.23,"provenance":"receipt","observed_on":"2026-10-30"},"costco":{"price":0.12,"provenance":"receipt","observed_on":"2026-10-29"}},
+    "beefbroth": {"traderjoes":{"price":6.57,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "blueberries": {"costco":{"price":8.7,"provenance":"receipt","observed_on":"2026-10-29"}},
+    "cabbage": {"traderjoes":{"price":1.99,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "carrots": {"traderjoes":{"price":0.99,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "chbreast": {"wildfork":{"price":6,"provenance":"receipt","observed_on":"2026-10-23"}},
     "chthigh": {"wildfork":{"price":6.4,"provenance":"receipt","observed_on":"2026-10-30"}},
     "chuckroast": {"wildfork":{"price":7.48,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "dill": {"traderjoes":{"price":1.99,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "eggs": {"traderjoes":{"price":5.99,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "gfbutter": {"costco":{"price":2.75,"provenance":"receipt","observed_on":"2026-10-29"}},
+    "gfhotdogs": {"wildfork":{"price":7,"provenance":"receipt","observed_on":"2026-10-23"}},
     "grdbeef": {"wildfork":{"price":6,"provenance":"receipt","observed_on":"2026-10-30"}},
-    "salmon": {"wildfork":{"price":10.65,"provenance":"receipt","observed_on":"2026-10-30"}}
+    "grdturkey": {"wildfork":{"price":8,"provenance":"receipt","observed_on":"2026-10-23"}},
+    "kiwi": {"costco":{"price":0.49,"provenance":"receipt","observed_on":"2026-10-29"}},
+    "milk": {"traderjoes":{"price":5.99,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "oats": {"costco":{"price":4.4,"provenance":"receipt","observed_on":"2026-10-29"}},
+    "pjcheese": {"traderjoes":{"price":2.66,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "raspberries": {"costco":{"price":4,"provenance":"receipt","observed_on":"2026-10-29"}},
+    "salmon": {"wildfork":{"price":10.65,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "sourdough": {"traderjoes":{"price":3.69,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "steamedbeets": {"traderjoes":{"price":2.29,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "sweetonion": {"traderjoes":{"price":3.99,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "tomatopaste": {"traderjoes":{"price":0.99,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "whitepotatoes": {"traderjoes":{"price":2.99,"provenance":"receipt","observed_on":"2026-10-30"}},
+    "yogurt": {"costco":{"price":3.99,"provenance":"receipt","observed_on":"2026-10-29"}}
   }
 }

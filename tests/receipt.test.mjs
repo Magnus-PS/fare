@@ -41,6 +41,7 @@ test('pack ratios compare like units and refuse unlike ones', () => {
   assert.equal(packRatio('40 oz', '2 lb'), 1.25);
   assert.equal(packRatio('16 oz bag', '1 lb'), 1);
   assert.equal(packRatio('each', 'bunch'), null);
+  assert.equal(packRatio('12 ct (3 lb)', 'each'), 12); // count sets the price; the weight is kept for reference
   assert.deepEqual(parsePack('15 oz can'), { n: 15, unit: 'oz' });
 });
 

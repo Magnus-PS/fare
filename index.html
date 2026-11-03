@@ -16,7 +16,7 @@
   --accent:#1e6a44; --accent-ink:#ffffff; --accent-soft:#e2eee6;
   --org:#256f45; --org-bg:#e0f0e5; --c15:#24678f; --c15-bg:#e0edf6;
   --wild:#176a73; --wild-bg:#dbeff0; --past:#875811; --past-bg:#f5ead6;
-  --warn:#9a4a12; --warn-bg:#fbe9dc;
+  --warn:#9a4a12; --warn-bg:#fbe9dc; --alert:#b3261e; --alert-bg:#fde7e5;
   --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -27,14 +27,14 @@
   --accent:#62c38d; --accent-ink:#0c1a12; --accent-soft:#1b2e23;
   --org:#80d2a1; --org-bg:#1a3224; --c15:#8fc3e4; --c15-bg:#172a37;
   --wild:#80d0d6; --wild-bg:#153134; --past:#e1b466; --past-bg:#342916;
-  --warn:#f0a774; --warn-bg:#3a2316; color-scheme:dark;
+  --warn:#f0a774; --warn-bg:#3a2316; --alert:#ff9b92; --alert-bg:#3d1b18; color-scheme:dark;
 }}
 :root[data-theme="dark"]{
   --bg:#0f1512; --surface:#17201b; --ink:#e4ebe6; --muted:#9aaa9f; --line:#2a3630;
   --accent:#62c38d; --accent-ink:#0c1a12; --accent-soft:#1b2e23;
   --org:#80d2a1; --org-bg:#1a3224; --c15:#8fc3e4; --c15-bg:#172a37;
   --wild:#80d0d6; --wild-bg:#153134; --past:#e1b466; --past-bg:#342916;
-  --warn:#f0a774; --warn-bg:#3a2316; color-scheme:dark;
+  --warn:#f0a774; --warn-bg:#3a2316; --alert:#ff9b92; --alert-bg:#3d1b18; color-scheme:dark;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);}
@@ -76,7 +76,7 @@ label.chip:has(input:checked){background:var(--accent-soft);border-color:var(--a
 .rule{display:inline-block;font:600 11.5px/1.2 var(--body);padding:3px 8px;border-radius:999px;white-space:nowrap}
 .r-org{color:var(--org);background:var(--org-bg)} .r-c15{color:var(--c15);background:var(--c15-bg)}
 .r-wild{color:var(--wild);background:var(--wild-bg)} .r-past{color:var(--past);background:var(--past-bg)}
-.r-flag{color:var(--warn);background:var(--warn-bg)}
+.r-flag{color:var(--warn);background:var(--warn-bg)} .r-alert{color:var(--alert);background:var(--alert-bg)}
 .guides{display:grid;gap:8px;margin:0;padding:0;list-style:none}
 .guides li{display:grid;grid-template-columns:18px 1fr;gap:8px}
 .guides li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:8px;margin-left:4px}
@@ -303,7 +303,7 @@ function prepRecipe(r){
 }
 // Cautions on items outside our sourcing rules (processed meat, not organic, check the label)
 const flagsOf=id=>(ING_FLAGS[id]||[]).map(f=>FLAGS[f]).filter(Boolean);
-const flagChips=id=>flagsOf(id).map(f=>`<span class="rule r-flag" title="${esc(f.why)}">${esc(f.label)}</span>`).join(' ');
+const flagChips=id=>flagsOf(id).map(f=>`<span class="rule ${f.cls||'r-flag'}" title="${esc(f.why)}">${esc(f.label)}</span>`).join(' ');
 const noteFor=(r,id)=>((r.items||[]).find(it=>it.id===id)||{}).note||'';
 
 function rowsFor(id){
@@ -642,7 +642,7 @@ function renderList(){
       <button class="btn small" data-editp="${it.id}" aria-expanded="${editP===it.id}">Edit price</button>
       <div class="wh"><span class="rule r-price">${srcLabel(it)}</span>${it.each==null?'':`<span class="pr">${money(it.each)} per ${esc(it.d[2])}</span>`}</div>
       <div class="wh"><span class="rule ${ru.cls}">${ru.label}</span><span>${esc(ru.why)}</span></div>
-      ${flagsOf(it.id).map(f=>`<div class="wh"><span class="rule r-flag">${esc(f.label)}</span><span>${esc(f.why)}</span></div>`).join('')}
+      ${flagsOf(it.id).map(f=>`<div class="wh"><span class="rule ${f.cls||'r-flag'}">${esc(f.label)}</span><span>${esc(f.why)}</span></div>`).join('')}
       ${editP===it.id?priceForm(it):''}</div>`}).join('')).join('')}
   </div>`).join('')}
   ${extras.length?`<div class="card store"><div class="store-head"><h3>Added by you</h3><span class="learned">Not priced yet</span></div>${extras.map(e=>`<div class="item"><div class="nm">${esc(e.name)}<span class="qty">${num(e.amt)} ${esc(e.unit)}</span></div><div class="wh"><span>For ${esc(e.recipe)}</span></div></div>`).join('')}</div>`:''}
@@ -684,7 +684,7 @@ function bindPrices(){
     e.preventDefault();
     const price=+f.price.value,pack=f.pack.value.trim()||catPack,ratio=packRatio(pack,catPack);
     if(!(price>0)){f.querySelector('.err').textContent='Enter the price on the shelf tag.';return}
-    if(!ratio){f.querySelector('.err').textContent=`Can't compare "${pack}" with ${catPack}. Use lb, oz or a count, like "2 lb" or "24 ct".`;return}
+    if(!ratio){f.querySelector('.err').textContent=`Can't compare "${pack}" with ${catPack}. Use oz or a count, like "32 oz" or "24 ct".`;return}
     (S.manual[id]=S.manual[id]||{})[f.store.value]={price:Math.round(price/ratio*100)/100,provenance:'manual',observed_on:new Date().toLocaleDateString('en-CA'),entered:{price,pack}};
     editP=null;save();render();toast('Price saved');
   };
