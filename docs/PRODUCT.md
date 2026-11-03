@@ -2,7 +2,7 @@
 
 > One place to go each week for what to eat, why to eat it, and where it's cheapest to buy.
 
-Status: ideation, v0.2 (Oct 2026). Owner: Magnus.
+Status: ideation, v0.3 (Nov 2026). Owner: Magnus.
 
 ---
 
@@ -10,7 +10,7 @@ Status: ideation, v0.2 (Oct 2026). Owner: Magnus.
 
 Clean eating with less thought. Every week Fare hands you a meal plan you already mostly agree with, the reasons behind it, a grocery list that only contains food worth buying, and a shopping route that fits how *you* like to shop (one stop, cheapest, or your favourite chain).
 
-Prices come from real receipts wherever possible, and every price says where it came from (receipt, store listing or estimate). See [RECEIPTS.md](RECEIPTS.md).
+Prices come from real receipts and shelf prices wherever possible, and every price says where it came from (receipt, shelf, store listing or stand-in). See [RECEIPTS.md](RECEIPTS.md).
 
 It starts as Magnus's own weekly routine, systematized. If it saves him an hour a week, it goes to a handful of friends. If it saves them time too, it earns a public version.
 
@@ -127,7 +127,7 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 ### Phase 0: "Replace my spreadsheet" (now, 1 to 2 weekends)
 - [x] Clickable POC with mock data (`index.html`): profile, plan with why, swap, approve, grocery list, store routing, feedback box
 - [x] Batch cook mode: 3 recipes over 6 nights plus a flex night (cheat, healthy takeout, or a new recipe)
-- [x] Per-member portion sizes, eating styles, estimated-macro labels, editable recipe ingredients, list downloads, price breakdown by item / meal / plan
+- [x] Per-member portion sizes, eating styles, estimated-macro labels, editable recipe ingredients, list downloads, dinner costs by meal
 - [x] Real stores: Costco, Trader Joe's, Wild Fork, ShopRite
 - [ ] Swap the mock catalog for **your real recipes** (the 15 to 25 you actually cook). First one in: paleo beef & sausage chili
 - [x] Receipt logging as a local tool (`tools/receipt.mjs`): receipt transcribed in Claude chat to Markdown, then checked and logged to `local/`, with derived prices in `data/prices.json`, provenance labels, store-less estimates as fallback and a local admin view. Spec: [RECEIPTS.md](RECEIPTS.md) section 11

@@ -31,7 +31,7 @@ Receipt in (photo / PDF)
   -> match to catalog (alias table, else model suggestion you confirm)
   -> price observation log (append-only, with receipt reference)
   -> current price per (ingredient, store)  <- fallbacks when no receipt
-  -> app price breakdown + admin view, each price labelled by source
+  -> app Prices tab, grocery list and dinner costs + admin view, each price labelled by source
 ```
 
 **Ingestion.** Images are resized to a 1,600 px long edge (HEIC converted to JPEG). PDFs go to the model directly. Duplicates are caught by file SHA-256 and by (store, date, total).
@@ -68,7 +68,7 @@ Every observation is logged. A newer receipt for the same store and product repl
 | Rank | Source | Label in the app | Confidence |
 |---|---|---|---|
 | 1 | Receipt under 180 days | Receipt · date | High |
-| 2 | Manual entry (shelf price typed in) | Logged · date | High |
+| 2 | Manual entry (shelf price typed in) | Shelf · date | High |
 | 3 | Store's official API (Kroger Product API) | Kroger listing · date | Medium |
 | 4 | Online listing with saved URL | Online estimate | Low to medium |
 | 5 | Median of public averages (BLS, USDA AMS) scaled by store | Typical price | Low |
