@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseReceipt, checkTotals, packRatio, pricePerCatalogPack, parsePack } from '../tools/receipt-lib.mjs';
 import { derive } from '../tools/derive-prices.mjs';
+import { toObservations, merge } from '../tools/shelf.mjs';
 
 const receipt = (rows, head = 'subtotal: 21.47\ntax: 0.53\ntotal: 22.00') => `---
 store: costco
@@ -57,4 +58,44 @@ test('derive: newest wins, sale and review never set the price, stale is flagged
   assert.deepEqual(prices.eggs.costco, { price: 4.5, provenance: 'receipt', observed_on: '2026-10-18' });
   assert.deepEqual(skipped, { sale: 1, review: 1 });
   assert.equal(derive([o('2026-01-02', 4)], new Date('2026-10-27')).prices.eggs.costco.stale, true);
+});
+
+const CATALOG = { STORES: [{ id: 'costco' }], ING: { eggs: ['Eggs', 'Dairy & eggs', 'dozen', 'past'], beef: ['Beef', 'Meat & fish', '16 oz', 'grass'] } };
+const shelf = entries => ({ fare_shelf_prices: 1, entries });
+const ENTRY = { ingredient_id: 'eggs', store_id: 'costco', entered_price: 9, store_pack: '24 ct', observed_on: '2026-11-03', on_sale: false };
+
+test('shelf prices convert to the catalog pack', () => {
+  const { observations, problems } = toObservations(shelf([ENTRY]), CATALOG, '2026-11-04');
+  assert.deepEqual(problems, []);
+  const o = observations[0];
+  assert.deepEqual([o.price, o.pack, o.store_pack, o.provenance, o.purchased_on, o.logged_on], [4.5, 'dozen', '24 ct', 'manual', '2026-11-03', '2026-11-04']);
+});
+
+test('shelf prices that cannot be checked are listed, never guessed', () => {
+  const { observations, problems } = toObservations(shelf([
+    { ...ENTRY, ingredient_id: 'nope' }, { ...ENTRY, store_id: 'nope' }, { ...ENTRY, entered_price: 0 },
+    { ...ENTRY, observed_on: '' }, { ...ENTRY, store_pack: 'bunch' },
+  ]), CATALOG);
+  assert.equal(observations.length, 0);
+  assert.equal(problems.length, 5);
+  assert.throws(() => toObservations({ entries: [] }, CATALOG), /Copy my prices/);
+});
+
+test('pasting again replaces the same item, store and date only', () => {
+  const first = toObservations(shelf([ENTRY]), CATALOG).observations;
+  const again = toObservations(shelf([{ ...ENTRY, entered_price: 10 }]), CATALOG).observations;
+  const receipt = { id: 'r-1', ingredient_id: 'beef', store_id: 'costco', price: 6, purchased_on: '2026-10-01', provenance: 'receipt' };
+  const log = merge([receipt, ...first], again);
+  assert.deepEqual(log.map(o => [o.id, o.price]), [['r-1', 6], ['shelf-eggs-costco-2026-11-03', 5]]);
+});
+
+test('sale shelf prices are kept but never set the current price', () => {
+  const { observations } = toObservations(shelf([{ ...ENTRY, on_sale: true }]), CATALOG);
+  assert.deepEqual(derive(observations).prices, {});
+  assert.equal(derive(observations).skipped.sale, 1);
+});
+
+test('derived prices carry the pack as sold', () => {
+  const { observations } = toObservations(shelf([ENTRY]), CATALOG);
+  assert.equal(derive(observations).prices.eggs.costco.store_pack, '24 ct');
 });
