@@ -147,6 +147,25 @@ tr.pick td{background:var(--accent-soft)}
 .bk-row .meter{grid-column:1/-1}
 small.sub{display:block;color:var(--muted);font-size:12px}
 .pedit{grid-column:1/-1;display:grid;gap:10px;padding:12px;margin-top:6px;border:1px solid var(--line);border-radius:8px}
+.pedit .wh{font-size:13px}
+.fields.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.goals{display:grid;gap:14px}
+.goal .meter.big{margin-top:6px}
+.ptable td,.ptable th{padding:8px}
+.ptable th:first-child,.ihead{position:sticky;left:0;background:var(--surface);z-index:1;min-width:128px;max-width:150px;box-shadow:1px 0 0 var(--line)}
+.ihead b{font-weight:600;display:block;line-height:1.25}
+.ihead small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.cell{min-width:104px;padding:0!important}
+.cell.na{color:var(--muted);font-size:13px;padding:8px!important;opacity:.6}
+.cellb{display:grid;gap:2px;justify-items:start;width:100%;min-height:52px;padding:8px;border:0;background:none;color:inherit;font:14px var(--body);text-align:left;cursor:pointer;border-radius:6px}
+.cellb:hover,.cellb[aria-expanded="true"]{background:var(--accent-soft)}
+.cellb b{font:500 14px var(--mono);color:var(--org)}
+.cellb small{font-size:11.5px;color:var(--muted);line-height:1.3}
+.c-add{color:var(--accent);font-weight:600;font-size:13px}
+.c-none{color:var(--muted);font-size:13px;font-style:italic}
+.cellb small.c-sale{color:var(--warn)}
+.formcell{padding:0!important}
+.formwrap{position:sticky;left:0;width:min(560px,calc(100vw - 66px));padding:4px 0 10px}
 .pedit .err{color:var(--warn);font-size:13px;margin:0}
 .cat{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding-top:14px}
 .fb-btn{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;box-shadow:0 4px 14px rgba(0,0,0,.18)}
@@ -154,7 +173,8 @@ small.sub{display:block;color:var(--muted);font-size:12px}
 .fb ul{margin:0;padding-left:18px;max-height:140px;overflow:auto;font-size:13px;color:var(--muted)}
 .empty{color:var(--muted);font-size:14px}
 @media (max-width:520px){
-  nav{margin-left:0;width:100%} nav button{flex:1;justify-content:center;padding:7px 6px}
+  .bar{gap:8px;padding-block:8px} .brand small{display:none}
+  nav{margin-left:0;width:100%;flex-wrap:nowrap} nav button{flex:1 1 auto;justify-content:center;padding:6px 4px;font-size:13px;white-space:nowrap} nav button .n{display:none}
   .macros{grid-template-columns:repeat(2,minmax(0,1fr))}
   .meal{grid-template-columns:minmax(0,1fr);gap:6px} .day small{display:inline;margin-left:8px}
   .night{grid-template-columns:1fr auto} .night .what{grid-column:1/-1;grid-row:2}
@@ -627,7 +647,7 @@ function renderList(){
   const base=rs.filter(r=>r.stops===1)[0],save1=pick&&base&&pick!==base?savings(pick,base,compared):null;
   const bySize={};rs.forEach(r=>{if(!bySize[r.stops])bySize[r.stops]=r});
   const opts=Object.values(bySize).sort((a,b)=>a.stops-b.stops);
-  const routeLine=pick?`<p style="margin:0"><b>Fare pick: ${esc(names(pick.set))}.</b> ${save1&&save1.n?`Saves ${money(Math.max(0,save1.amt))} on ${plural(save1.n,'compared item')} against ${esc(names(base.set))} alone.`:`Based on ${plural(compared.length,'compared item')}.`}</p>`
+  const routeLine=pick?`<p style="margin:0"><b>Fare pick: ${esc(names(pick.set))}.</b> ${save1&&save1.n&&save1.amt>0.005?`Saves ${money(Math.max(0,save1.amt))} on ${plural(save1.n,'compared item')} against ${esc(names(base.set))} alone.`:`Based on ${plural(compared.length,'compared item')}.`}</p>`
     :`<p style="margin:0"><b>${compared.length} of ${items.length} items compared, no route recommended yet.</b> Fare recommends one once half the list has prices from two stores.</p>`;
   const adjust=unlocked?`<details class="ing"><summary>Adjust</summary><div class="fields">
       <div class="field"><label for="sv">An extra stop is worth it if it saves at least <span class="money" id="svv">${money(sh.stopValue)}</span></label><input id="sv" type="range" min="0" max="30" step="1" value="${sh.stopValue}"><div class="hint">$0 means cheapest at any cost; $30 means one stop.</div></div>
@@ -686,10 +706,129 @@ function renderList(){
   $('#cp-all').onclick=()=>copyText(allGroups.map(([sid,its])=>listText(groupName(sid).toUpperCase(),its)).join('\n\n')+(extras.length?'\n\nADDED BY YOU\n'+extras.map(e=>`- [ ] ${e.name}: ${num(e.amt)} ${e.unit}`).join('\n'):''));
   document.querySelectorAll('[data-cpstore]').forEach(b=>b.onclick=()=>{const sid=b.dataset.cpstore;copyText(listText(storeName(sid).toUpperCase(),groups[sid]))});
 }
+// Prices tab: one row per dinner item, one column per store. Goals: one real price per item, then two competing prices.
+let priceEdit=null; // the open price form: {id,sid}
+const aisleSkip=new Set();
+const spendOf=it=>{const p=priceIn(it,S.shop.stores);return p.each==null?0:p.each*it.packs};
+const goalDone=it=>{const n=pricedAt(it).length;return n>=2||(n>=1&&S.shop.stores.filter(s=>sells(s,it)).length===n)};
+const salePrice=(id,sid)=>(S.sales[id]||{})[sid]||null;
+// Per oz or per count, so different packs read on one scale. Null for items like "head" or "bunch".
+function unitPrice(price,it){const p=packOf(it.d[2]);if(!p)return null;
+  if(p.u==='lb')return `${money(price/(p.n*16))}/oz`;
+  if((p.u==='oz'||p.u==='fl oz'||p.u==='ct')&&(p.n>1||p.u!=='ct'))return `${money(price/p.n)}/${p.u}`;
+  return null}
+const soldAs=(p,it)=>{const pk=p.entered?p.entered.pack:p.store_pack;return pk&&packRatio(pk,it.d[2])!==1?`sold as ${pk}`:''};
+function cellHTML(it,sid,low){
+  if(!carries(sid,it))return `<td class="cell na"><span title="${esc(storeName(sid))} doesn't stock this aisle">n/a</span></td>`;
+  const p=priceAt(it,sid),none=!sells(sid,it),sale=salePrice(it.id,sid),open=priceEdit&&priceEdit.id===it.id&&priceEdit.sid===sid;
+  const body=none?'<span class="c-none">None here</span>':p?`<b>${money(p.price)}</b>${low?'<span class="rule r-org">Cheapest</span>':''}<small>${srcLabel(p)}</small>${[unitPrice(p.price,it),soldAs(p,it)].filter(Boolean).map(t=>`<small>${esc(t)}</small>`).join('')}`:'<span class="c-add">+ add</span>';
+  return `<td class="cell"><button class="cellb" aria-expanded="${!!open}" data-cell="${it.id}" data-sid="${sid}" aria-label="${esc(it.d[0])} at ${esc(storeName(sid))}">${body}${sale?`<small class="c-sale">Sale ${money(sale.price)}</small>`:''}</button></td>`;
+}
+function rowHead(it){
+  const p=priceIn(it,[]),st=p.state==='standin'&&!pricedAt(it).length?`<span class="pchip stand">~${money(p.each)}</span>`:!pricedAt(it).length?'<span class="pchip miss">No price</span>':'';
+  return `<b>${esc(it.d[0])}</b><small>per ${esc(it.d[2])}${it.packs?` · buy ${it.packs}`:''}</small>${st?`<small>${st}${p.state==='standin'?' stand-in':''}</small>`:''}${flagsOf(it.id).length?`<small>${flagChips(it.id)}</small>`:''}`;
+}
+function priceForm(it,sid,aisle){
+  const m=(S.manual[it.id]||{})[sid],sale=salePrice(it.id,sid),ru=RULES[it.d[3]],cur=m||sale;
+  return `<form class="pedit" data-pform="${it.id}" data-store="${sid}" novalidate>
+    <h3>${esc(it.d[0])} at ${esc(storeName(sid))}</h3>
+    <div class="wh"><span class="rule ${ru.cls}">${ru.label}</span> <span class="hint">${esc(ru.why)}</span></div>
+    ${flagsOf(it.id).map(f=>`<div class="wh"><span class="rule ${f.cls||'r-flag'}">${esc(f.label)}</span> <span class="hint">${esc(f.why)}</span></div>`).join('')}
+    <div class="fields two">
+      <div class="field"><label for="pf-price">Price</label><input id="pf-price" name="price" type="number" min="0" step="0.01" inputmode="decimal" value="${cur?cur.entered.price:''}" placeholder="0.00"></div>
+      <div class="field"><label for="pf-pack">Pack size on the shelf</label><input id="pf-pack" name="pack" type="text" value="${esc(cur?cur.entered.pack:it.d[2])}"></div>
+    </div>
+    <p class="hint" style="margin:0">Fare compares per ${esc(it.d[2])}. Use oz, lb or a count.</p>
+    <label class="chip" style="justify-self:start"><input type="checkbox" name="sale" ${!m&&sale?'checked':''}>On sale</label>
+    <p class="err" role="alert"></p>
+    <div class="row"><button class="btn small primary">Save price</button>
+      <button type="button" class="btn small" data-pnone>None here</button>
+      <button type="button" class="btn small" data-pcancel>${aisle?'Skip':'Cancel'}</button>
+      ${m||sale?'<button type="button" class="btn small" data-pclear>Remove my price</button>':''}</div>
+    <p class="hint" style="margin:0">"None here" means this store doesn't stock it, or doesn't stock it to this standard.</p>
+  </form>`;
+}
+function bindPriceForm(after){
+  const f=document.querySelector('[data-pform]');if(!f)return;
+  const id=f.dataset.pform,sid=f.dataset.store,catPack=ING[id][2];
+  const clearNone=()=>{if(S.none[id])delete S.none[id][sid]};
+  f.querySelector('[data-pcancel]').onclick=()=>after('skip',id);
+  const clr=f.querySelector('[data-pclear]');
+  if(clr)clr.onclick=()=>{if(S.manual[id])delete S.manual[id][sid];if(S.sales[id])delete S.sales[id][sid];save();after('done',id)};
+  f.querySelector('[data-pnone]').onclick=()=>{(S.none[id]=S.none[id]||{})[sid]=today();save();toast('Marked as none here');after('done',id)};
+  f.onsubmit=e=>{
+    e.preventDefault();
+    const price=+f.price.value,pack=f.pack.value.trim()||catPack,ratio=packRatio(pack,catPack),err=f.querySelector('.err');
+    if(!(price>0)){err.textContent='Enter the price on the shelf tag.';return}
+    if(!ratio){err.textContent=`Can't compare "${pack}" with ${catPack}. Use oz or a count, like "32 oz" or "24 ct".`;return}
+    const entry={price:Math.round(price/ratio*100)/100,provenance:'manual',observed_on:today(),entered:{price,pack}};
+    if(f.sale.checked)(S.sales[id]=S.sales[id]||{})[sid]={...entry,on_sale:true};
+    else{(S.manual[id]=S.manual[id]||{})[sid]=entry;if(S.sales[id])delete S.sales[id][sid]}
+    clearNone();save();toast(f.sale.checked?'Sale price saved. It won\'t set the current price.':'Price saved');after('done',id);
+  };
+  f.price.focus();f.scrollIntoView({block:'center'});
+}
+const today=()=>new Date().toLocaleDateString('en-CA');
+function shelfEntries(){
+  const out=[];
+  [[S.manual,false],[S.sales,true]].forEach(([src,on_sale])=>Object.entries(src).forEach(([id,by])=>Object.entries(by).forEach(([sid,e])=>{
+    out.push({ingredient_id:id,store_id:sid,entered_price:e.entered.price,store_pack:e.entered.pack,observed_on:e.observed_on,on_sale})})));
+  return out;
+}
 function renderPrices(){
   if(!S.plan)buildPlan();
-  const {items}=groceries();
-  $('#view-prices').innerHTML=`<div><h2>Prices</h2></div><div class="card">${weekHTML(items,S.shop.stores)}</div><div class="card">${breakoutHTML(items)}</div>`;
+  const {items}=groceries(),ids=S.shop.stores,V=$('#view-prices');
+  const head=`<div><h2>Prices</h2><p class="lede">Log a price from the shelf, no receipt or purchase needed. First one real price for every dinner item, then two from competing stores.</p></div>`;
+  if(!ids.length){V.innerHTML=head+`<div class="card"><p class="empty" style="margin:0">Pick your stores on List &amp; stores first.</p></div>`;return}
+  if(S.aisle&&!ids.includes(S.aisle))S.aisle='';
+  const order=[...items].sort((a,b)=>pricedAt(a).length-pricedAt(b).length||spendOf(b)-spendOf(a));
+  const one=items.filter(it=>pricedAt(it).length>=1).length,two=items.filter(goalDone).length,only=items.filter(it=>goalDone(it)&&pricedAt(it).length===1).length;
+  const next=(one<items.length?order.filter(it=>!pricedAt(it).length):order.filter(it=>!goalDone(it))).slice(0,3);
+  const goal=(label,n,note='')=>`<div class="goal"><div class="spread"><span>${label}</span><span class="money">${n} of ${items.length}</span></div><span class="meter big" role="img" aria-label="${n} of ${items.length}"><i class="s-real" style="width:${n/(items.length||1)*100}%"></i></span>${note?`<small class="sub">${note}</small>`:''}</div>`;
+  const progress=`<div class="card"><p class="label">Price goals</p><div class="goals">${goal('One real price per item',one)}${goal('Two competing prices per item',two,only?`Includes ${only} that only one of your stores sells.`:'')}</div>
+    ${next.length?`<p style="margin:12px 0 0"><b>Price next:</b> ${next.map(it=>esc(it.d[0])).join(', ')}</p>`:'<p style="margin:12px 0 0"><b>Both goals are met for this week\'s dinners.</b></p>'}</div>`;
+  const picker=`<div class="card"><p class="label">I'm at</p><div class="seg" role="group" aria-label="Store you're at">${ids.map(s=>`<button class="btn small" data-aisle="${s}" aria-pressed="${S.aisle===s}">${esc(storeName(s))}</button>`).join('')}</div>
+    <p class="hint" style="margin:8px 0 0">Pick a store to see only what still needs a price there.</p></div>`;
+  const entries=shelfEntries();
+  const backup=entries.length?`<div class="card"><div class="spread"><div><p class="label" style="margin:0">Your shelf prices</p><p class="hint" style="margin:4px 0 0">${plural(entries.length,'price')} saved in this browser only. Copy them to keep them safe and use them on other devices.</p></div><button class="btn small" id="cp-shelf">Copy my prices</button></div></div>`:'';
+  const main=S.aisle?aisleHTML(items):tableHTML(order,ids);
+  V.innerHTML=head+progress+picker+main+`<div class="card">${breakoutHTML(items)}</div><div class="card">${weekHTML(items,ids)}</div>`+backup;
+  V.querySelectorAll('[data-aisle]').forEach(b=>b.onclick=()=>{S.aisle=S.aisle===b.dataset.aisle?'':b.dataset.aisle;priceEdit=null;aisleSkip.clear();save();render()});
+  V.querySelectorAll('[data-cell]').forEach(b=>b.onclick=()=>{const c={id:b.dataset.cell,sid:b.dataset.sid};priceEdit=priceEdit&&priceEdit.id===c.id&&priceEdit.sid===c.sid?null:c;render()});
+  const other=$('#other');if(other)other.onchange=()=>{if(other.value){priceEdit={id:other.value,sid:S.aisle};render()}};
+  const cp=$('#cp-shelf');if(cp)cp.onclick=()=>copyText(JSON.stringify({fare_shelf_prices:1,entries},null,1));
+  bindPriceForm((how,id)=>{
+    if(S.aisle){if(how==='skip')aisleSkip.add(id);
+      const nx=aisleNeed(items).find(it=>!aisleSkip.has(it.id));priceEdit=nx?{id:nx.id,sid:S.aisle}:null;
+    }else priceEdit=null;
+    render();
+  });
+}
+// What still needs a price at the store you're in: by aisle, biggest spend first.
+const aisleNeed=items=>catOrder.flatMap(c=>items.filter(it=>it.d[1]===c&&sells(S.aisle,it)&&!realPrice(it.id,S.aisle)).sort((a,b)=>spendOf(b)-spendOf(a)));
+function tableHTML(order,ids){
+  return `<div class="card"><p class="label">Item by store</p><div class="tablewrap"><table class="ptable"><thead><tr><th>Item</th>${ids.map(s=>`<th>${esc(storeName(s))}</th>`).join('')}</tr></thead><tbody>
+    ${order.map(it=>{const pr=pricedAt(it,ids),low=pr.length>1?Math.min(...pr.map(s=>priceAt(it,s).price)):null,open=priceEdit&&priceEdit.id===it.id&&ids.includes(priceEdit.sid);
+      return `<tr><td class="ihead">${rowHead(it)}</td>${ids.map(s=>{const p=priceAt(it,s);return cellHTML(it,s,low!=null&&p&&p.price===low)}).join('')}</tr>${open?`<tr><td colspan="${ids.length+1}" class="formcell"><div class="formwrap">${priceForm(it,priceEdit.sid,false)}</div></td></tr>`:''}`}).join('')}
+  </tbody></table></div></div>`;
+}
+function aisleHTML(items){
+  const sid=S.aisle,need=aisleNeed(items),needIds=new Set(need.map(it=>it.id));
+  const done=items.filter(it=>carries(sid,it)&&!needIds.has(it.id));
+  const onList=new Set(items.map(it=>it.id));
+  const row=it=>{const open=priceEdit&&priceEdit.id===it.id&&priceEdit.sid===sid,p=priceAt(it,sid),others=pricedAt(it).filter(s=>s!==sid);
+    return `<div class="item"><div class="nm">${esc(it.d[0])}<span class="qty">per ${esc(it.d[2])}</span></div>
+      <button class="btn small" data-cell="${it.id}" data-sid="${sid}" aria-expanded="${!!open}">${p?money(p.price):sells(sid,it)?'Add price':'None here'}</button>
+      ${others.length?`<div class="wh"><span>${others.map(s=>`${esc(storeName(s))} ${money(priceAt(it,s).price)}`).join(' · ')}</span></div>`:''}
+      ${open?priceForm(it,sid,true):''}</div>`};
+  const pickedOther=priceEdit&&priceEdit.sid===sid&&!onList.has(priceEdit.id)?{id:priceEdit.id,d:ING[priceEdit.id],packs:0}:null;
+  return `<div class="card store"><div class="store-head"><h3>${esc(storeName(sid))}</h3><span class="learned">${plural(need.length,'item')} to price</span></div>
+    ${need.length?catOrder.filter(c=>need.some(it=>it.d[1]===c)).map(c=>`<div class="cat">${c}</div>`+need.filter(it=>it.d[1]===c).map(row).join('')).join(''):`<p class="empty">Every dinner item ${esc(storeName(sid))} might sell has a price or is marked none here.</p>`}
+    ${done.length?`<details class="ing" style="margin-top:12px" ${priceEdit&&done.some(it=>it.id===priceEdit.id)?'open':''}><summary>Already done here (${done.length})</summary>${done.map(row).join('')}</details>`:''}
+    <div class="field" style="margin-top:14px"><label for="other">Log something else</label><select id="other"><option value="">Pick from the catalog…</option>${catOrder.map(c=>`<optgroup label="${esc(c)}">${Object.entries(ING).filter(([i,d])=>d[1]===c&&!onList.has(i)&&carries(sid,{d})).sort((a,b)=>a[1][0].localeCompare(b[1][0])).map(([i,d])=>`<option value="${i}" ${pickedOther&&pickedOther.id===i?'selected':''}>${esc(d[0])}</option>`).join('')}</optgroup>`).join('')}</select>
+      <div class="hint">Not on this week's list. Saved for later and left out of the totals.</div></div>
+    ${pickedOther?priceForm(pickedOther,sid,true):''}
+  </div>`;
 }
 function bindShop(){
   document.querySelectorAll('input[name=store]').forEach(c=>c.onchange=()=>{
