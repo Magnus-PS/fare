@@ -28,9 +28,9 @@ Weekly clean-eating dinner plan, grocery list with "why", real price comparison 
 ## Run and check
 - `python3 -m http.server 8000`, then open http://localhost:8000/. `file://` won't work because of fetch.
 - Validate the data with `python3 -m json.tool data/catalog.json > /dev/null` (repeat for each file).
-- `node --test` runs the price tool tests. Shelf prices copied from the Prices tab: `pbpaste | node tools/shelf.mjs`. Receipts: `node tools/receipt.mjs prompt | check <file> | add <file> [--yes]`; see `docs/RECEIPTS.md` section 11.
-- Smoke test: profile → plan → swap → approve → Prices (log a price, None here) → grocery list → CSV download → feedback. The stop-value slider appears once half the list has prices from two stores. The console should stay clean.
-- Check UI changes in a browser at phone width (390 px) and desktop.
+- `node --test` runs the price tool tests. Filled-in price sheets: `node tools/shelf.mjs <sheet.csv> ...`. Receipts: `node tools/receipt.mjs prompt | check <file> | add <file> [--yes]`; see `docs/RECEIPTS.md` section 11.
+- Smoke test: profile → plan → swap → approve → Prices (download a sheet, upload it filled in, log a price in a cell) → grocery list → CSV download → feedback. The stop-value slider appears once half the list has prices from two stores. The console should stay clean.
+- Check UI changes in a desktop browser. Phones aren't supported in the POC, so don't spend effort on phone-only work.
 
 ## Deploy
 Push to `main`. GitHub Pages serves the repo root (`.nojekyll` is present).

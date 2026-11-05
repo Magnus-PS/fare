@@ -74,7 +74,7 @@ Profile ──► Proposed plan + guidelines + macros ──► Swap / thumbs / 
 
 **Grocery list** copies in full or per store as a checklist, and downloads as CSV. **Dinner costs** count only what each recipe uses, plus what carries over in partly used packs, and say so when a meal has items with no price ("at least $15.10").
 
-**Prices tab.** One row per dinner item and one column per store, with progress toward two goals: one real price per item, then two competing prices per item (an item only one of your stores sells counts as done once it has that price). "I'm at" narrows it to what still needs a price at that store, by aisle and biggest spend first. Prices need no receipt or purchase. "None here" marks an item a store doesn't stock, or doesn't stock to our standard.
+**Prices tab.** One row per dinner item and one column per store, with progress toward two goals: one real price per item, then two competing prices per item (an item only one of your stores sells counts as done once it has that price). Prices need no receipt or purchase. Each store has a **price sheet**: a CSV to download, fill in with Google Sheets and upload, with a preview before anything is saved. Any table cell also takes one price directly. "None here" marks an item a store doesn't stock, or doesn't stock to our standard. Format: [RECEIPTS.md](RECEIPTS.md) section 11.
 
 **Three kinds of price.** Real: a receipt or shelf price at that store. Stand-in: a store-less placeholder from `data/estimates.json`. Missing: nothing yet. A store never borrows another store's price. Store totals use real prices only and show the gap ("$35.50 for 4 of 18 items, 14 unknown"); stand-ins appear only in week and meal costs, and always look different.
 
@@ -132,7 +132,7 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 - [ ] Swap the mock catalog for **your real recipes** (the 15 to 25 you actually cook). First one in: paleo beef & sausage chili
 - [x] Receipt logging as a local tool (`tools/receipt.mjs`): receipt transcribed in Claude chat to Markdown, then checked and logged to `local/`, with derived prices in `data/prices.json`, provenance labels, store-less estimates as fallback and a local admin view. Spec: [RECEIPTS.md](RECEIPTS.md) section 11
 - [x] Log your last 3 to 4 receipts with it (all 4 logged, Nov 2)
-- [x] Log shelf prices in the app: the Prices tab, saved in the browser as "Shelf · date", with `tools/shelf.mjs` to bring them into the price log
+- [x] Log shelf prices without a receipt: a price sheet per store (CSV, filled in with Google Sheets) uploaded on the Prices tab or logged with `tools/shelf.mjs`, or one price at a time in the table
 - [ ] One real price for every item in the week's dinner plan (6 of 18 on Nov 3)
 - [ ] Two prices from competing stores for every item (0 of 18 on Nov 3)
 - [ ] Use it yourself for 2 weeks. Keep a list of every time you went back to the spreadsheet.
@@ -162,7 +162,7 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 - Pricing model, if any (a small subscription covers LLM and data costs)
 
 ### Explicitly not now
-Native apps, nutrition-label scanning, calorie-level meal tracking, social feeds, scraping store websites.
+Phone support in the POC (Nov 5: price sheets replace phone entry and sync), native apps, nutrition-label scanning, calorie-level meal tracking, social feeds, scraping store websites.
 
 ---
 

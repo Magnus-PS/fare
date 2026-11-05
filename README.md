@@ -26,7 +26,7 @@ python3 -m http.server 8000
 | `data/prices.json` | Real prices from receipts and shelf prices, derived by `tools/derive-prices.mjs` |
 | `data/estimates.json` | Stand-in price per ingredient, each with a source |
 | `data/config.json` | Eating styles, goals, portion sizes, restrictions |
-| `tools/`, `tests/` | Receipt logging (`node tools/receipt.mjs`), shelf price import (`pbpaste \| node tools/shelf.mjs`) and their tests (`node --test`) |
+| `tools/`, `tests/` | Receipt logging (`node tools/receipt.mjs`), price sheet import (`node tools/shelf.mjs <sheet.csv>`) and their tests (`node --test`) |
 | `docs/PRODUCT.md` | Product brief, principles, roadmap, LLM cost plan |
 | `docs/RECEIPTS.md` | Receipt logging and price sources spec |
 
