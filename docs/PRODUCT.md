@@ -2,7 +2,7 @@
 
 > One place to go each week for what to eat, why to eat it, and where it's cheapest to buy.
 
-Status: ideation, v0.2 (Oct 2026). Owner: Magnus.
+Status: ideation, v0.3 (Nov 2026). Owner: Magnus.
 
 ---
 
@@ -10,7 +10,7 @@ Status: ideation, v0.2 (Oct 2026). Owner: Magnus.
 
 Clean eating with less thought. Every week Fare hands you a meal plan you already mostly agree with, the reasons behind it, a grocery list that only contains food worth buying, and a shopping route that fits how *you* like to shop (one stop, cheapest, or your favourite chain).
 
-Prices come from real receipts wherever possible, and every price says where it came from (receipt, store listing or estimate). See [RECEIPTS.md](RECEIPTS.md).
+Prices come from real receipts and shelf prices wherever possible, and every price says where it came from (receipt, shelf, store listing or stand-in). See [RECEIPTS.md](RECEIPTS.md).
 
 It starts as Magnus's own weekly routine, systematized. If it saves him an hour a week, it goes to a handful of friends. If it saves them time too, it earns a public version.
 
@@ -49,16 +49,18 @@ Profile ──► Proposed plan + guidelines + macros ──► Swap / thumbs / 
    ▲                                                         │
    └──────────── learned preferences (likes, dislikes) ◄─────┘
                                                              ▼
-                              Grocery list (with why) ──► Store plan (cost vs stops)
+                     Prices (real vs stand-in, by store) ──► Grocery list (with why) ──► Store plan
                                                              ▼
-                                              Log actual prices (receipt) ──► better prices
+                               Log prices (shelf or receipt) ──► better prices
 ```
+
+**Dinner only for now (Nov 3).** Fare plans and prices dinners only until dinner works end to end. Ingredients that might serve breakfast or lunch can stay in the catalog and be logged, but they aren't planned or counted. `BREAKFASTS` stays in `data/catalog.json`, unused.
 
 **Two ways to cook** (chosen in the profile):
 - **Batch cook (default):** 3 recipes that reheat well, at least 4 servings each (2 dinners per recipe for the household), cooked in one session and reheated across 6 nights. Mon to Wed come from the fridge; Thu to Sat portions are frozen and thawed the night before (cooked food keeps 3 to 4 days in the fridge). Night 7 is a **flex night**: a cheat takeout (pizza), a healthier takeout (a Chipotle-style bowl), or one new recipe cooked fresh, which adds its ingredients to the list. Recipes carry a `batch` flag and a `keeps` note.
 - **Cook most nights:** 3 to 7 individual dinners.
 
-**Profile inputs**: cooking style; household members, each with a portion size and optional weight; eating style; restrictions (dairy-free, gluten-free only); goals (gain muscle, lose weight, eat healthy for less, simpler meals, more fun meals); dinners per week (nightly mode); shopping style (value of an extra stop, loyal store, stores you'll visit).
+**Profile inputs**: cooking style; household members, each with a portion size and optional weight; eating style; restrictions (dairy-free, gluten-free only); goals (gain muscle, lose weight, eat healthy for less, simpler meals, more fun meals); dinners per week (nightly mode). Stores you'll visit, the value of an extra stop and a loyal store are set on List & stores.
 
 **Meal size (stated assumption, editable).** Everyone eats the same meals; portions differ. Each member picks a portion multiplier: small child 0.5×, child 0.67×, standard 1×, hungry 1.33×, large or training 1.67× (so 2, 3 and 5 eggs reads as 0.67×, 1× and 1.67×). One standard portion is about 3 eggs, 5 oz cooked meat or fish, or 1 cup cooked grains. Meal size = sum of multipliers; every ingredient scales by it, and a batch is `max(4, ceil(2 × meal size))` portions. Weight only drives protein targets (0.9 to 1 g per lb). Later: "we had leftovers / ran short" feedback nudges the multipliers.
 
@@ -70,9 +72,13 @@ Profile ──► Proposed plan + guidelines + macros ──► Swap / thumbs / 
 
 **Recipe ingredients** are editable per recipe (amounts, notes, added items) and downloadable as CSV or copyable. Edits are stored per standard portion so they scale, flow into the grocery list (added items show as "added by you, not priced"), and stay with the recipe for next week.
 
-**Grocery list** downloads in full or per store (CSV, or copy as a checklist). Prices sit in a separate **price breakdown** with three levels: by item, by meal or batch (counting only what each recipe uses, plus what carries over in partly used packs), and plan total. Receipts will replace estimates item by item, which is what makes item, meal, batch and plan level savings visible.
+**Grocery list** copies in full or per store as a checklist, and downloads as CSV. **Dinner costs** count only what each recipe uses, plus what carries over in partly used packs, and say so when a meal has items with no price ("at least $15.10").
 
-**Store routing (the clever bit, already in the POC):** instead of asking "1 stop or 4?", ask *"An extra stop is worth it if it saves at least $X."* Fare enumerates every combination of the user's stores, costs the list in each, and picks the one with the lowest `total + X × (stops − 1)`. $0 means cheapest at any cost; $50 means one-stop. A loyal store is forced into the set. This one slider covers the "4 stops is fine", "one place only" and "I'm a Kroger person" users.
+**Prices tab.** One row per dinner item and one column per store, with progress toward two goals: one real price per item, then two competing prices per item (an item only one of your stores sells counts as done once it has that price). Prices need no receipt or purchase. Each store has a **price sheet**: a CSV to download, fill in with Google Sheets and upload, with a preview before anything is saved. Any table cell also takes one price directly. "None here" marks an item a store doesn't stock, or doesn't stock to our standard. Format: [RECEIPTS.md](RECEIPTS.md) section 11.
+
+**Three kinds of price.** Real: a receipt or shelf price at that store. Stand-in: a store-less placeholder from `data/estimates.json`. Missing: nothing yet. A store never borrows another store's price. Store totals use real prices only and show the gap ("$35.50 for 4 of 18 items, 14 unknown"); stand-ins appear only in week and meal costs, and always look different.
+
+**Store routing:** ask *"An extra stop is worth it if it saves at least $X."* Fare tries every combination of the user's stores and ranks them on items with real prices at two or more stores, plus $X for each extra stop. A loyal store is forced into the set. Fare recommends a route only once half the list is compared; before that, one item could decide the whole trip, so it says how many items are compared and leaves the choice open. Savings count only items with a real price on both sides.
 
 ---
 
@@ -121,12 +127,14 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 ### Phase 0: "Replace my spreadsheet" (now, 1 to 2 weekends)
 - [x] Clickable POC with mock data (`index.html`): profile, plan with why, swap, approve, grocery list, store routing, feedback box
 - [x] Batch cook mode: 3 recipes over 6 nights plus a flex night (cheat, healthy takeout, or a new recipe)
-- [x] Per-member portion sizes, eating styles, estimated-macro labels, editable recipe ingredients, list downloads, price breakdown by item / meal / plan
+- [x] Per-member portion sizes, eating styles, estimated-macro labels, editable recipe ingredients, list downloads, dinner costs by meal
 - [x] Real stores: Costco, Trader Joe's, Wild Fork, ShopRite
 - [ ] Swap the mock catalog for **your real recipes** (the 15 to 25 you actually cook). First one in: paleo beef & sausage chili
 - [x] Receipt logging as a local tool (`tools/receipt.mjs`): receipt transcribed in Claude chat to Markdown, then checked and logged to `local/`, with derived prices in `data/prices.json`, provenance labels, store-less estimates as fallback and a local admin view. Spec: [RECEIPTS.md](RECEIPTS.md) section 11
-- [ ] Log your last 3 to 4 receipts with it (1 of 4 logged: Wild Fork, Oct 30)
-- [x] Log shelf prices in the app: "Edit price" on any grocery item, saved in the browser as "Logged · date"
+- [x] Log your last 3 to 4 receipts with it (all 4 logged, Nov 2)
+- [x] Log shelf prices without a receipt: a price sheet per store (CSV, filled in with Google Sheets) uploaded on the Prices tab or logged with `tools/shelf.mjs`, or one price at a time in the table
+- [ ] One real price for every item in the week's dinner plan (6 of 18 on Nov 3)
+- [ ] Two prices from competing stores for every item (0 of 18 on Nov 3)
 - [ ] Use it yourself for 2 weeks. Keep a list of every time you went back to the spreadsheet.
 - No backend, no LLM. State in localStorage. Host on GitHub Pages.
 
@@ -154,7 +162,7 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 - Pricing model, if any (a small subscription covers LLM and data costs)
 
 ### Explicitly not now
-Native apps, nutrition-label scanning, calorie-level meal tracking, social feeds, scraping store websites.
+Phone support in the POC (Nov 5: price sheets replace phone entry and sync), native apps, nutrition-label scanning, calorie-level meal tracking, social feeds, scraping store websites.
 
 ---
 
@@ -249,7 +257,7 @@ EWG republishes each spring; check ewg.org for the current year and update `data
 ## 9. Open questions
 
 - Batch cook: should leftovers from a 1-person household's 4-serving batches become planned lunches?
-- Breakfast and lunch: plan them, or just dinners plus a default breakfast? (POC: dinners plus an optional default breakfast.)
+- Breakfast and lunch: plan them once dinner works? (POC: dinners only, decided Nov 3.)
 - How strict is "organic unless no proven difference" for items on neither EWG list? (POC: organic preferred.)
 - Receipts: should friends' receipts improve prices for everyone at the same store, and what does the ToS need to say first?
 - Do friends share your stores, or does each user pick stores and enter prices for them? (Affects how fast price data improves.)

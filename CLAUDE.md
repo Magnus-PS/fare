@@ -1,6 +1,6 @@
 # Fare: notes for Claude Code
 
-Weekly clean-eating meal plan, grocery list with "why", and cheapest store route. Read `docs/PRODUCT.md` first: it holds the product principles, data model and roadmap. `docs/RECEIPTS.md` is the receipt logging and price sources spec.
+Weekly clean-eating dinner plan, grocery list with "why", real price comparison between stores, and cheapest store route. Read `docs/PRODUCT.md` first: it holds the product principles, data model and roadmap. `docs/RECEIPTS.md` is the receipt logging and price sources spec.
 
 ## Conventions
 - **No build step for the app.** The app is `index.html`: plain HTML, CSS and vanilla JS. Don't add bundlers or frameworks to it. If a page grows past about 1,500 lines, propose Vite + Preact before splitting it.
@@ -18,7 +18,7 @@ Weekly clean-eating meal plan, grocery list with "why", and cheapest store route
 ## Layout
 - `index.html`: the app, served at the site root
 - `data/`: `catalog.json` (stores, rules, ingredients, unit conversions, recipes), `config.json` (styles, goals, portions, restrictions), `prices.json` (derived real prices), `estimates.json` (store-less fallback prices, each with a source)
-- `tools/`, `tests/`: receipt logging (Markdown route) and its tests
+- `tools/`, `tests/`: receipt logging (Markdown route), shelf price import (`tools/shelf.mjs`) and their tests
 - `local/` (gitignored): receipts, observation log, aliases, `admin.html`
 - `docs/`: `PRODUCT.md` (brief and roadmap), `RECEIPTS.md` (receipt logging spec)
 
@@ -28,9 +28,9 @@ Weekly clean-eating meal plan, grocery list with "why", and cheapest store route
 ## Run and check
 - `python3 -m http.server 8000`, then open http://localhost:8000/. `file://` won't work because of fetch.
 - Validate the data with `python3 -m json.tool data/catalog.json > /dev/null` (repeat for each file).
-- `node --test` runs the receipt tool tests. Receipts: `node tools/receipt.mjs prompt | check <file> | add <file> [--yes]`; see `docs/RECEIPTS.md` section 11.
-- Smoke test: profile → plan → swap → approve → grocery list → store slider → CSV download → feedback. The console should stay clean.
-- Check UI changes in a browser at phone width (390 px) and desktop.
+- `node --test` runs the price tool tests. Filled-in price sheets: `node tools/shelf.mjs <sheet.csv> ...`. Receipts: `node tools/receipt.mjs prompt | check <file> | add <file> [--yes]`; see `docs/RECEIPTS.md` section 11.
+- Smoke test: profile → plan → swap → approve → Prices (download a sheet, upload it filled in, log a price in a cell) → grocery list → CSV download → feedback. The stop-value slider appears once half the list has prices from two stores. The console should stay clean.
+- Check UI changes in a desktop browser. Phones aren't supported in the POC, so don't spend effort on phone-only work.
 
 ## Deploy
 Push to `main`. GitHub Pages serves the repo root (`.nojekyll` is present).
