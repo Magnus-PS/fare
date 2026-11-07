@@ -4,7 +4,7 @@
     "paleo": {"label":"Paleo","ex":["grain","legume","dairy","soy"],"note":"No grains, legumes, dairy or soy."},
     "keto": {"label":"Keto","ex":["grain","legume","starchy","fruit"],"maxCarb":20,"note":"Very low carb: about 20 g of carbs or less per dinner. No grains, legumes, starchy vegetables or most fruit."},
     "animal": {"label":"Animal-based","allow":["animal","fruit","avocado","squash","aromatic"],"note":"Meat, fish, eggs and dairy with fruit and a few gentle plants. No grains, legumes or most vegetables."},
-    "whole30": {"label":"Whole30","ex":["grain","legume","dairy","soy"],"note":"No grains, legumes, dairy, soy or added sugar. Our catalog has no added sugar."},
+    "whole30": {"label":"Whole30","ex":["grain","legume","dairy","soy","sugar"],"note":"No grains, legumes, dairy, soy or added sugar (including honey)."},
     "slowcarb": {"label":"Slow-Carb","ex":["grain","starchy","fruit","dairy"],"note":"No \"white\" carbs, fruit or dairy. Beans, meat and vegetables instead."},
     "custom": {"label":"Custom","note":"Choose what to leave out."}
   },

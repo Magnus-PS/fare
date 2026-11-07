@@ -24,6 +24,7 @@
     "grass": {"label":"Grass-fed & finished","cls":"r-past","why":"Grass-fed and finished: no feedlot, better fat profile."},
     "dairy": {"label":"Organic grass-fed dairy","cls":"r-past","why":"Organic, grass-fed dairy: no added hormones, pasture access."},
     "pantry": {"label":"Organic pantry","cls":"r-org","why":"Organic staple: a small premium and it keeps."},
+    "raw": {"label":"Raw honey","cls":"r-org","why":"Raw and unfiltered, from a farmer's market or the grocer. Local when you can."},
     "conv": {"label":"Conventional","cls":"r-flag","why":"Doesn't meet our sourcing rules. Allowed, but we'd rather buy organic or grass-fed when we can."}
   },
   "ING": {
@@ -69,7 +70,9 @@
     "sausage": ["Ground pork sausage, pasture-raised, no sugar or fillers","Meat & fish","16 oz","past"],
     "tomatopaste": ["Tomato paste, organic","Pantry","6 oz can","pantry"],
     "tomatosauce": ["Tomato sauce, organic","Pantry","15 oz can","pantry"],
-    "beefbroth": ["Beef broth, organic","Pantry","32 oz carton","pantry"],
+    "beefbroth": ["Beef bone broth, organic","Pantry","32 oz carton","pantry"],
+    "honey": ["Honey, raw","Pantry","16 oz jar","raw"],
+    "celery": ["Celery","Produce","bunch","org"],
     "pepperoncini": ["Pepperoncini, no yellow 5 or added sulfites","Pantry","16 oz jar","pantry"],
     "grdturkey": ["Ground turkey, organic","Meat & fish","16 oz","past"],
     "chuckroast": ["Chuck roast, USDA Choice","Meat & fish","16 oz","conv"],
@@ -89,7 +92,9 @@
     "sweetonion": ["Sweet onions, organic","Produce","32 oz bag","c15"]
   },
   "RECIPES": [
-    {"id":"paleo-chili","batch":true,"keeps":"Tastes even better the next day. Freezes well for up to 3 months.","name":"Paleo beef & sausage chili with pepperoncini","serves":8,"mins":60,"kcal":490,"p":33,"c":14,"f":33,"tags":["protein","simple"],"contains":["meat"],"why":"Grass-fed beef and pasture-raised sausage for about 33 g of protein a portion, in one pot that freezes for months.","items":[{"id":"grdbeef","qty":32,"unit":"oz","note":"85/15"},{"id":"sausage","qty":16,"unit":"oz","note":"Italian or breakfast"},{"id":"onion","qty":1,"unit":"each","note":"diced"},{"id":"garlic","qty":5,"unit":"clove","note":"minced"},{"id":"sweetpot","qty":1,"unit":"each","note":"peeled and cubed"},{"id":"tomatopaste","qty":2,"unit":"tbsp"},{"id":"tomatosauce","qty":30,"unit":"oz"},{"id":"beefbroth","qty":0.5,"unit":"cup"},{"id":"pepperoncini","qty":0.75,"unit":"cup","note":"sliced, stems removed; keep 2 tbsp of brine"},{"name":"avocado or olive oil","qty":1,"unit":"tbsp","pantry":true},{"name":"chili powder","qty":4,"unit":"tbsp","pantry":true},{"name":"ground cumin","qty":1,"unit":"tbsp","pantry":true},{"name":"smoked paprika","qty":1,"unit":"tsp","pantry":true},{"name":"dried oregano","qty":1,"unit":"tsp","pantry":true},{"name":"sea salt","qty":1,"unit":"tsp","pantry":true},{"name":"black pepper","qty":0.5,"unit":"tsp","pantry":true}]}
+    {"id":"paleo-chili","batch":true,"keeps":"Tastes even better the next day. Freezes well for up to 3 months.","name":"Paleo beef & sausage chili with pepperoncini","serves":8,"mins":60,"kcal":494,"p":33,"c":15,"f":34,"tags":["protein","simple"],"contains":["meat"],"why":"Grass-fed beef and pasture-raised sausage for about 33 g of protein a portion, in one pot that freezes for months.","items":[{"id":"grdbeef","qty":32,"unit":"oz","note":"85/15"},{"id":"sausage","qty":16,"unit":"oz","note":"Italian or breakfast"},{"id":"onion","qty":1,"unit":"each","note":"diced"},{"id":"garlic","qty":5,"unit":"clove","note":"minced"},{"id":"sweetpot","qty":1,"unit":"each","note":"peeled and cubed"},{"id":"tomatopaste","qty":2,"unit":"tbsp"},{"id":"tomatosauce","qty":30,"unit":"oz"},{"id":"beefbroth","qty":0.5,"unit":"cup"},{"id":"pepperoncini","qty":0.75,"unit":"cup","note":"sliced, stems removed; keep 2 tbsp of brine"},{"name":"avocado or olive oil","qty":1,"unit":"tbsp","pantry":true},{"name":"chili powder","qty":4,"unit":"tbsp","pantry":true},{"name":"ground cumin","qty":1,"unit":"tbsp","pantry":true},{"name":"smoked paprika","qty":1,"unit":"tsp","pantry":true},{"name":"dried oregano","qty":1,"unit":"tsp","pantry":true},{"name":"sea salt","qty":1,"unit":"tsp","pantry":true},{"name":"black pepper","qty":0.5,"unit":"tsp","pantry":true}]},
+    {"id":"honey-garlic-salmon","name":"Honey garlic lemon butter salmon","serves":2,"mins":25,"kcal":432,"p":38,"c":15,"f":25,"tags":["protein","quick"],"contains":["fish","dairy"],"why":"Wild salmon for omega-3s and about 38 g of protein a portion, glazed in a pan sauce.","items":[{"id":"salmon","qty":12,"unit":"oz","note":"2 skin-on fillets, about 6 oz each"},{"id":"gfbutter","qty":3,"unit":"tbsp"},{"id":"garlic","qty":3,"unit":"clove","note":"minced"},{"id":"honey","qty":1.5,"unit":"tbsp"},{"id":"lemon","qty":1,"unit":"each","note":"1 tbsp juice, plus a few slices to top"},{"name":"sea salt","qty":0.5,"unit":"tsp","pantry":true},{"name":"apple cider vinegar","qty":1,"unit":"tsp","pantry":true}]},
+    {"id":"paleo-borscht","batch":true,"keeps":"Crockpot on low and leave it. Reheats well; stir in the beets at the end, just before serving, so they don't bleed.","name":"Paleo beef borscht","serves":8,"mins":60,"kcal":447,"p":36,"c":20,"f":25,"tags":["protein","simple"],"contains":["meat"],"why":"A filling beef stew with a broad range of vegetables and about 36 g of protein a portion, great for the cooler months.","items":[{"id":"chuckroast","qty":32,"unit":"oz","note":"cut into 1-inch cubes"},{"id":"onion","qty":1,"unit":"each","note":"large, diced"},{"id":"carrots","qty":8,"unit":"oz","note":"about 4 carrots, diced"},{"id":"celery","qty":3,"unit":"stalk","note":"diced"},{"id":"garlic","qty":5,"unit":"clove","note":"minced"},{"id":"tomatopaste","qty":3,"unit":"tbsp"},{"id":"beefbroth","qty":10,"unit":"cup"},{"id":"steamedbeets","qty":32,"unit":"oz","note":"3/4-inch cubes; add at the end, just before serving, so they don't bleed"},{"id":"cabbage","qty":4,"unit":"cup","note":"thinly sliced, about half a head"},{"name":"tallow or ghee","qty":3,"unit":"tbsp","pantry":true},{"name":"apple cider vinegar","qty":2.5,"unit":"tbsp","pantry":true},{"name":"sea salt","qty":2,"unit":"tsp","pantry":true},{"name":"black pepper","qty":0.75,"unit":"tsp","pantry":true},{"name":"bay leaves","qty":2,"unit":"each","pantry":true},{"name":"fresh dill, optional, to sprinkle on top","qty":0.75,"unit":"cup","pantry":true},{"name":"Greek yogurt (or coconut yogurt for dairy-free), optional, to top","qty":0.75,"unit":"cup","pantry":true}]}
   ],
   "BREAKFASTS": [
     {"id":"yogurt-bowl","name":"Greek yogurt, berries & oats","kcal":380,"p":28,"c":44,"f":10,"contains":["dairy"],"ing":{"yogurt":0.14,"blueberries":0.15,"strawberries":0.15,"oats":0.05}},
@@ -141,6 +146,8 @@
     "tomatopaste": ["veg"],
     "tomatosauce": ["veg"],
     "beefbroth": ["animal"],
+    "honey": ["sugar"],
+    "celery": ["veg"],
     "pepperoncini": ["veg"],
     "grdturkey": ["animal"],
     "chuckroast": ["animal","redmeat"],
@@ -203,6 +210,8 @@
     "tomatopaste": [10,"tbsp"],
     "tomatosauce": [15,"oz"],
     "beefbroth": [4,"cup"],
+    "honey": [21,"tbsp"],
+    "celery": [11,"stalks"],
     "pepperoncini": [2,"cup"],
     "grdturkey": [16,"oz"],
     "chuckroast": [16,"oz"],
@@ -230,13 +239,17 @@
     "tomatopaste": {"tbsp":10,"oz":6},
     "tomatosauce": {"oz":15},
     "beefbroth": {"cup":4},
+    "honey": {"tbsp":21,"oz":16},
+    "celery": {"stalk":11},
+    "cabbage": {"head":1,"cup":8},
+    "lemon": {"each":1},
     "pepperoncini": {"cup":2},
     "gfbutter": {"tbsp":16,"oz":8}
   },
   "FLAGS": {
     "processed": {"label":"Processed meat · in moderation","why":"The WHO's cancer agency (IARC) classes processed meat as a cause of colorectal cancer, so keep it occasional."},
     "moderation": {"label":"In moderation","why":"Not organic or grass-fed. Fine now and then; we wouldn't plan around it."},
-    "not-grassfed": {"label":"Not grass-fed","why":"USDA Choice is a quality grade, not a sourcing claim. Buy grass-fed when you can."},
+    "not-grassfed": {"label":"Not grass-fed · lower-quality meat","why":"USDA Choice grades marbling, not how the animal was raised: this is likely grain-finished, conventionally raised beef. Fine for now; swap for grass-fed when you can."},
     "dd-not-organic":{"label":"Not organic · Dirty Dozen","cls":"r-alert","why":"High pesticide residue in USDA testing, and this one is conventional. Buy organic when you can."},"not-organic":{"label":"Not organic","why":"Our default is organic, but this is the conventional one."},
     "check-label": {"label":"Check the label","why":"Jarred: look for a short ingredient list with no added sugar, gums or preservatives."}
   },

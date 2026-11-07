@@ -64,7 +64,7 @@ Profile ──► Proposed plan + guidelines + macros ──► Swap / thumbs / 
 
 **Meal size (stated assumption, editable).** Everyone eats the same meals; portions differ. Each member picks a portion multiplier: small child 0.5×, child 0.67×, standard 1×, hungry 1.33×, large or training 1.67× (so 2, 3 and 5 eggs reads as 0.67×, 1× and 1.67×). One standard portion is about 3 eggs, 5 oz cooked meat or fish, or 1 cup cooked grains. Meal size = sum of multipliers; every ingredient scales by it, and a batch is `max(4, ceil(2 × meal size))` portions. Weight only drives protein targets (0.9 to 1 g per lb). Later: "we had leftovers / ran short" feedback nudges the multipliers.
 
-**Eating styles** filter recipe components by ingredient attributes (grain, legume, dairy, soy, starchy, fruit, red meat, shellfish): Clean (none), Paleo, Keto (also ≤ ~20 g carbs per dinner), Animal-based (allow-list: animal foods, fruit, avocado, squash, aromatics), Whole30, Slow-Carb, and Custom (pick components to leave out). Seasonings (garlic, onion, lemon) pass every style.
+**Eating styles** filter recipe components by ingredient attributes (grain, legume, dairy, soy, starchy, fruit, red meat, shellfish): Clean (none), Paleo, Keto (also ≤ ~20 g carbs per dinner), Animal-based (allow-list: animal foods, fruit, avocado, squash, aromatics), Whole30 (also no added sugar, so recipes with honey drop out), Slow-Carb, and Custom (pick components to leave out). Seasonings (garlic, onion, lemon) pass every style.
 
 **Macros** are always labelled as estimated averages per standard portion, with a scaled line per member, because the cut, brand and cooking change real values.
 
@@ -154,6 +154,7 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 - Leftovers and "cook once, eat twice" planning; pantry staples you already have
 - PWA manifest and offline list for the store
 - Share a plan or recipe with another user
+- **Recipe view with cooking steps** (future, wanted): show a full recipe with its method, download it, and take live feedback while cooking ("too salty", "needed 20 more minutes") so the recipe improves and adapts over time. Steps are kept in the `local/recipes/` drafts until then; the catalog has no steps field yet
 
 ### Phase 3: Public-ready
 - Real price data (Kroger has a public product API; others via receipts and crowd-sourced price logs)
