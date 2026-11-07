@@ -12,14 +12,14 @@ Weekly clean-eating dinner plan, grocery list with "why", real price comparison 
 - **Every price carries its provenance** (receipt, manual, store API, estimate) and a date where one exists. `data/prices.json` is derived by `tools/derive-prices.mjs`; never hand-edit it.
 - **LLM calls never come from the browser.** Phase 0 makes no API calls: receipts are transcribed in Claude chat. Any automated call added later goes through a spend guard first (`docs/RECEIPTS.md` section 8), and in Phase 1 the app calls the server function, which follows the guardrails in `docs/PRODUCT.md` section 6.
 - **State** lives in localStorage under `KEY` in `index.html`. Access is wrapped in try/catch and the app must work without it. Bump the key only when the saved state shape changes in a way that breaks it.
-- **Private stays local.** Receipts, extractions, the observation log, aliases, usage logs and the admin page live in the gitignored `local/` folder. Only the derived `data/prices.json` is committed. The repo is public, so anything committed is public too.
+- **Private stays local.** Receipts, recipe drafts, extractions, the observation log, aliases, usage logs and the admin page live in the gitignored `local/` folder. Only the derived `data/prices.json` is committed. The repo is public, so anything committed is public too.
 - Use relative paths (`data/...`), because the site is served from `/fare/` on GitHub Pages.
 
 ## Layout
 - `index.html`: the app, served at the site root
 - `data/`: `catalog.json` (stores, rules, ingredients, unit conversions, recipes), `config.json` (styles, goals, portions, restrictions), `prices.json` (derived real prices), `estimates.json` (store-less fallback prices, each with a source)
 - `tools/`, `tests/`: receipt logging (Markdown route), shelf price import (`tools/shelf.mjs`) and their tests
-- `local/` (gitignored): receipts, observation log, aliases, `admin.html`
+- `local/` (gitignored): receipts, recipes (`local/recipes/<id>.md`, one per recipe; `_template.md` shows the format), observation log, aliases, `admin.html`
 - `docs/`: `PRODUCT.md` (brief and roadmap), `RECEIPTS.md` (receipt logging spec)
 
 ## Workflow

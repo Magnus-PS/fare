@@ -225,7 +225,7 @@ tr.tot td{font-weight:600;border-top:2px solid var(--ink);border-bottom:0}
 </header>
 
 <div class="wrap">
-  <p class="note">Prototype: sample household and sample recipes alongside your own. Dinner only for now. Prices are real only where marked; the rest are stand-ins or gaps. Nothing leaves this browser.</p>
+  <p class="note">Prototype: sample household; only your own recipes, so plans stay short until the catalog grows. Dinner only for now. Prices are real only where marked; the rest are stand-ins or gaps. Nothing leaves this browser.</p>
   <main>
     <p class="learned" id="boot-msg">Loading…</p>
     <section id="view-profile" hidden></section>
@@ -285,7 +285,6 @@ function hash(s){let h=7;for(const c of s)h=(h*31+c.charCodeAt(0))%997;return h/
 function score(r){
   let s=1;S.profile.goals.forEach(g=>Object.entries(GOAL_TAGS[g]).forEach(([t,w])=>{if(r.tags.includes(t))s+=w}));
   if(S.likes.includes(r.id))s+=1.5;
-  if(!r.sample)s+=3; // your own recipes before the prototype's samples
   return s+hash(r.id+S.profile.goals.join())*0.5;
 }
 const protein=r=>Object.keys(r.ing)[0];
@@ -502,7 +501,7 @@ function guidelines(meals){
   return g;
 }
 
-const mealMeta=r=>`${r.sample?'<span class="tag">Sample recipe</span>':''}<div class="meta">Est. per standard portion: ${r.kcal} kcal · P ${r.p} g · C ${r.c} g · F ${r.f} g · ${r.mins} min</div>
+const mealMeta=r=>`<div class="meta">Est. per standard portion: ${r.kcal} kcal · P ${r.p} g · C ${r.c} g · F ${r.f} g · ${r.mins} min</div>
         <div class="row" style="gap:6px">${r.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
 const mealActs=(i,r)=>{const liked=S.likes.includes(r.id);return `<div class="acts">
           <button class="btn small" data-act="like" data-i="${i}" aria-pressed="${liked}">${liked?'Liked':'Like'}</button>
@@ -568,7 +567,7 @@ function renderPlan(){
   const meals=S.plan.map(R),n=meals.length||1,avg=k=>Math.round(meals.reduce((s,r)=>s+r[k],0)/n);
   const wk=weekOf(),P=portions();
   $('#view-plan').innerHTML=`
-  <div class="spread"><div><h2>Week of ${fmtDate(wk)}</h2><p class="lede">${isBatch()?`Cook ${S.plan.length} recipes once and reheat them for 6 dinners; Sunday is your flex night`:`${S.plan.length} dinners`}. Meal size is ${portionsTxt(P)} standard portions (${S.profile.members.map(m=>esc(m.name)+' '+m.portion+'×').join(', ')}).</p></div>
+  <div class="spread"><div><h2>Week of ${fmtDate(wk)}</h2><p class="lede">${isBatch()?`Cook ${plural(S.plan.length,'recipe')} once and reheat them for 6 dinners; Sunday is your flex night`:`${S.plan.length} dinners`}. Meal size is ${portionsTxt(P)} standard portions (${S.profile.members.map(m=>esc(m.name)+' '+m.portion+'×').join(', ')}).</p></div>
   <div class="row"><span class="status ${S.approved?'ok':''}">${S.approved?'Approved':'Draft'}</span><button class="btn primary" id="approve">${S.approved?'View grocery list':'Approve plan'}</button></div></div>
   <div class="card"><p class="label">This week's guidelines</p><ul class="guides">${guidelines(meals).map(t=>`<li><span>${esc(t)}</span></li>`).join('')}</ul>
     <p class="label" style="margin:16px 0 0">Estimated average per standard dinner portion</p>
@@ -921,6 +920,8 @@ async function boot(){
     ({STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR}=cfg);
     PRICES=pr.prices;EST=est.estimates;
     RECIPES.forEach(prepRecipe);
+    // Drop saved plan picks for recipes that have left the catalog
+    if(S.plan)S.plan=S.plan.filter(R);if(S.flexNew&&!R(S.flexNew))S.flexNew=null;
     // Saved state can name ids that were renamed or have left the catalog
     const RENAMED={tj:'traderjoes',beef:'grdbeef',potatoes:'whitepotatoes'},ren=id=>RENAMED[id]||id;
     S.shop.stores=[...new Set(S.shop.stores.map(ren))].filter(id=>sIdx(id)>=0);S.shop.loyal=ren(S.shop.loyal);

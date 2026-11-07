@@ -68,7 +68,7 @@ Profile ──► Proposed plan + guidelines + macros ──► Swap / thumbs / 
 
 **Macros** are always labelled as estimated averages per standard portion, with a scaled line per member, because the cut, brand and cooking change real values.
 
-**Recipes are written as you cook them** ("2 tbsp tomato paste", serves 8). Each ingredient has an approximate conversion from its pack to kitchen units (`CONV` in `data/catalog.json`), and code turns recipe amounts into fractions of a pack: meals cost what they use, the list buys whole packs, and the rest carries over. A unit that can't be converted is an error at load, never a guess. Salt, oil and spices are pantry items: shown with the recipe, never listed or priced. In batch mode a recipe cooks its full yield when that covers the household. Prototype recipes are marked `sample` and rank below your own.
+**Recipes are written as you cook them** ("2 tbsp tomato paste", serves 8). Each ingredient has an approximate conversion from its pack to kitchen units (`CONV` in `data/catalog.json`), and code turns recipe amounts into fractions of a pack: meals cost what they use, the list buys whole packs, and the rest carries over. A unit that can't be converted is an error at load, never a guess. New recipes start as Markdown files in the private `local/recipes/` folder (`_template.md` shows the minimum: name, serves, ingredients with amounts) and are turned into catalog entries in a PR. Salt, oil and spices are pantry items: shown with the recipe, never listed or priced. In batch mode a recipe cooks its full yield when that covers the household. The catalog holds only your real recipes; the prototype's placeholder recipes were removed on 2026-11-07, so plans are short until it grows.
 
 **Recipe ingredients** are editable per recipe (amounts, notes, added items) and downloadable as CSV or copyable. Edits are stored per standard portion so they scale, flow into the grocery list (added items show as "added by you, not priced"), and stay with the recipe for next week.
 
@@ -129,7 +129,7 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 - [x] Batch cook mode: 3 recipes over 6 nights plus a flex night (cheat, healthy takeout, or a new recipe)
 - [x] Per-member portion sizes, eating styles, estimated-macro labels, editable recipe ingredients, list downloads, dinner costs by meal
 - [x] Real stores: Costco, Trader Joe's, Wild Fork, ShopRite
-- [ ] Swap the mock catalog for **your real recipes** (the 15 to 25 you actually cook). First one in: paleo beef & sausage chili
+- [ ] Swap the mock catalog for **your real recipes** (the 15 to 25 you actually cook). First one in: paleo beef & sausage chili; the mock recipes are removed (Nov 7)
 - [x] Receipt logging as a local tool (`tools/receipt.mjs`): receipt transcribed in Claude chat to Markdown, then checked and logged to `local/`, with derived prices in `data/prices.json`, provenance labels, store-less estimates as fallback and a local admin view. Spec: [RECEIPTS.md](RECEIPTS.md) section 11
 - [x] Log your last 3 to 4 receipts with it (all 4 logged, Nov 2)
 - [x] Log shelf prices without a receipt: a price sheet per store (CSV, filled in with Google Sheets) uploaded on the Prices tab or logged with `tools/shelf.mjs`, or one price at a time in the table
