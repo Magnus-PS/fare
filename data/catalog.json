@@ -13,7 +13,8 @@
     {"id":"traderjoes","name":"Trader Joe's"},
     {"id":"costco","name":"Costco"},
     {"id":"wildfork","name":"Wild Fork","carries":["Meat & fish"]},
-    {"id":"shoprite","name":"ShopRite"}
+    {"id":"shoprite","name":"ShopRite"},
+    {"id":"wegmans","name":"Wegmans"}
   ],
   "RULES": {
     "dd": {"label":"Organic · Dirty Dozen","cls":"r-org","why":"On EWG's Dirty Dozen: among the highest pesticide residues in USDA testing, so buy organic."},
