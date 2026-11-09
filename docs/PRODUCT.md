@@ -124,12 +124,22 @@ Curated catalog data (ingredients, recipes, EWG lists) lives as **JSON files in 
 
 ## 5. Roadmap
 
+### MVP path (set Nov 9, 2026): the order we work in
+Each stage finishes before the next starts. Dinner only throughout.
+1. **10 solid dinner recipes** that we actually cook or want to cook (3 in on Nov 9: chili, salmon, borscht). Drafts in `local/recipes/`, reviewed, then into the catalog.
+2. **Full ingredient list** for those 10, derived from the catalog (not typed by hand), including what's assumed in the pantry.
+3. **Shorter list:** lightly simplify recipes to share ingredients (fewer single-use items). Every change is proposed and reviewed by Magnus; nothing is simplified silently.
+4. **Prices from two or more stores for every ingredient**, through price sheets and receipts.
+5. **Design packet:** a minimal design system reused across future apps, then the Fare UI refined to it.
+6. **Use it for about 2 weeks** (Magnus and partner), fixing what gets in the way.
+7. **Share with friends and family:** a short what-and-how video of the build, a way for them to send feedback, then iterate.
+
 ### Phase 0: "Replace my spreadsheet" (now, 1 to 2 weekends)
 - [x] Clickable POC with mock data (`index.html`): profile, plan with why, swap, approve, grocery list, store routing, feedback box
 - [x] Batch cook mode: 3 recipes over 6 nights plus a flex night (cheat, healthy takeout, or a new recipe)
 - [x] Per-member portion sizes, eating styles, estimated-macro labels, editable recipe ingredients, list downloads, dinner costs by meal
 - [x] Real stores: Costco, Trader Joe's, Wild Fork, ShopRite
-- [ ] Swap the mock catalog for **your real recipes** (the 15 to 25 you actually cook). First one in: paleo beef & sausage chili; the mock recipes are removed (Nov 7)
+- [ ] Swap the mock catalog for **your real recipes**: 10 for the MVP (was 15 to 25; see MVP path above). First one in: paleo beef & sausage chili; the mock recipes are removed (Nov 7)
 - [x] Receipt logging as a local tool (`tools/receipt.mjs`): receipt transcribed in Claude chat to Markdown, then checked and logged to `local/`, with derived prices in `data/prices.json`, provenance labels, store-less estimates as fallback and a local admin view. Spec: [RECEIPTS.md](RECEIPTS.md) section 11
 - [x] Log your last 3 to 4 receipts with it (all 4 logged, Nov 2)
 - [x] Log shelf prices without a receipt: a price sheet per store (CSV, filled in with Google Sheets) uploaded on the Prices tab or logged with `tools/shelf.mjs`, or one price at a time in the table
