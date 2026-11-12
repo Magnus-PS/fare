@@ -247,7 +247,7 @@ tr.tot td{font-weight:600;border-top:2px solid var(--ink);border-bottom:0}
 
 <script>
 // Catalog and config load from data/*.json at boot (see boot() below)
-let TBD=new Set(),STORES,RULES,ING,PRICES,EST,RECIPES,ATTR,COOK,CONV,FLAGS,ING_FLAGS,STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR;
+let TBD=new Set(),UNPRICED=new Set(),STORES,RULES,ING,PRICES,EST,RECIPES,ATTR,COOK,CONV,FLAGS,ING_FLAGS,STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR;
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const KEY='fare-poc-v3';
@@ -372,8 +372,12 @@ function groceries(){
     else if(row.name)extras.push({name:row.name,amt:row.per*n,unit:row.unit||'',recipe:R(id).name});
   })});
   // Pack size to add (PACK_TBD): the catalog pack is "1 oz" or "1 fl oz", so you buy and pay for the amount used until a real size is set
-  const items=Object.entries(need).filter(([,q])=>q>0).map(([id,q])=>TBD.has(id)?{id,used:q,packs:Math.round(q*100)/100,tbd:true,d:ING[id]}:{id,used:q,packs:Math.max(1,Math.ceil(q-0.05)),d:ING[id]});
-  return {items,extras};
+  // Pantry staples (PANTRY_UNPRICED): listed with the amount needed and the pack size, but never priced, totalled or routed,
+  // because their cost per recipe is near negligible. DECISION TO FINALIZE: add a quarterly pantry estimate (one store-less
+  // figure per quarter, spread across dinners) instead of per-item prices. See docs/PRODUCT.md, "Pantry staples".
+  const staples=Object.entries(need).filter(([id,q])=>q>0&&UNPRICED.has(id)).map(([id,q])=>({id,used:q,d:ING[id]}));
+  const items=Object.entries(need).filter(([id,q])=>q>0&&!UNPRICED.has(id)).map(([id,q])=>TBD.has(id)?{id,used:q,packs:Math.round(q*100)/100,tbd:true,d:ING[id]}:{id,used:q,packs:Math.max(1,Math.ceil(q-0.05)),d:ING[id]});
+  return {items,extras,staples};
 }
 const sIdx=id=>STORES.findIndex(s=>s.id===id);
 const storeName=id=>STORES[sIdx(id)].name;
@@ -609,6 +613,7 @@ function renderPlan(){
 
 const catOrder=['Produce','Meat & fish','Dairy & eggs','Pantry'];
 const tbdUnit=it=>it.d[2].replace(/^1\s*/,'');
+const stapleTxt=st=>`check pantry · need ${num(st.used*COOK[st.id][0])} ${COOK[st.id][1]} · pack ${st.d[2]}`;
 const qtyTxt=it=>it.tbd?`${num(it.packs)} ${tbdUnit(it)} · pack size to add`:`${it.packs} × ${it.d[2]}`;
 function listRows(its){return its.map(it=>[it.store?storeName(it.store):'Any',it.d[1],it.d[0],it.tbd?num(it.packs):it.packs,it.tbd?tbdUnit(it)+' (pack size to add)':it.d[2],RULES[it.d[3]].label])}
 function listText(title,its){return title+'\n'+catOrder.filter(c=>its.some(it=>it.d[1]===c)).map(c=>c+'\n'+its.filter(it=>it.d[1]===c).map(it=>`- [ ] ${it.d[0]}: ${qtyTxt(it)}`).join('\n')).join('\n')}
@@ -641,7 +646,7 @@ const priceChip=it=>it.state==='real'?`<span class="pchip real">${money(it.each)
 
 function renderList(){
   if(!S.plan)buildPlan();
-  const {items,extras}=groceries(),sh=S.shop,P=portions();
+  const {items,extras,staples}=groceries(),sh=S.shop,P=portions();
   const compared=items.filter(it=>pricedAt(it).length>=2);
   const unlocked=compared.length>0&&compared.length>=items.length*ROUTE_MIN;
   const rs=unlocked?routes(items,compared):[],pick=rs[0]||null,set=pick?pick.set:sh.stores;
@@ -698,6 +703,7 @@ function renderList(){
       <div class="wh"><span class="rule ${ru.cls}">${ru.label}</span><span>${esc(ru.why)}</span></div>
       ${flagsOf(it.id).map(f=>`<div class="wh"><span class="rule ${f.cls||'r-flag'}">${esc(f.label)}</span><span>${esc(f.why)}</span></div>`).join('')}</div>`}).join('')).join('')}
   </div>`}).join('')}
+  ${staples.length?`<div class="card store"><div class="store-head"><h3>Pantry staples</h3><span class="learned">Check pantry · not priced</span></div>${staples.map(st=>`<div class="item"><div class="nm">${esc(st.d[0])}<span class="qty">${esc(stapleTxt(st))}</span></div>${flagsOf(st.id).length?`<div class="wh">${flagChips(st.id)}</div>`:''}</div>`).join('')}</div>`:''}
   ${extras.length?`<div class="card store"><div class="store-head"><h3>Added by you</h3><span class="learned">Not priced yet</span></div>${extras.map(e=>`<div class="item"><div class="nm">${esc(e.name)}<span class="qty">${num(e.amt)} ${esc(e.unit)}</span></div><div class="wh"><span>For ${esc(e.recipe)}</span></div></div>`).join('')}</div>`:''}
 
   <div class="sechead"><h2>Dinner costs</h2></div>
@@ -711,8 +717,9 @@ function renderList(){
   document.querySelectorAll('[data-goprices]').forEach(b=>b.onclick=()=>go('prices'));
   const allIts=allGroups.flatMap(([,its])=>its);
   const extraRows=extras.map(e=>['Any','Added by you',e.name,num(e.amt),e.unit,'For '+e.recipe]);
-  $('#dl-all').onclick=()=>saveFile('fare-grocery-list.csv',toCSV([LH,...listRows(allIts),...extraRows]));
-  $('#cp-all').onclick=()=>copyText(allGroups.map(([sid,its])=>listText(groupName(sid).toUpperCase(),its)).join('\n\n')+(extras.length?'\n\nADDED BY YOU\n'+extras.map(e=>`- [ ] ${e.name}: ${num(e.amt)} ${e.unit}`).join('\n'):''));
+  const stapleRows=staples.map(st=>['Any','Pantry staple',st.d[0],num(st.used*COOK[st.id][0]),COOK[st.id][1]+' needed','Check pantry ('+st.d[2]+' pack, not priced)']);
+  $('#dl-all').onclick=()=>saveFile('fare-grocery-list.csv',toCSV([LH,...listRows(allIts),...stapleRows,...extraRows]));
+  $('#cp-all').onclick=()=>copyText(allGroups.map(([sid,its])=>listText(groupName(sid).toUpperCase(),its)).join('\n\n')+(staples.length?'\n\nPANTRY STAPLES (check pantry)\n'+staples.map(st=>`- [ ] ${st.d[0]}: ${stapleTxt(st)}`).join('\n'):'')+(extras.length?'\n\nADDED BY YOU\n'+extras.map(e=>`- [ ] ${e.name}: ${num(e.amt)} ${e.unit}`).join('\n'):''));
   document.querySelectorAll('[data-cpstore]').forEach(b=>b.onclick=()=>{const sid=b.dataset.cpstore;copyText(listText(storeName(sid).toUpperCase(),groups[sid]))});
 }
 // Prices tab: one row per dinner item, one column per store. Goals: one real price per item, then two competing prices.
@@ -922,7 +929,7 @@ renderFb();
 async function boot(){
   try{
     const [cat,cfg,pr,est]=await Promise.all(['data/catalog.json','data/config.json','data/prices.json','data/estimates.json'].map(async u=>{const r=await fetch(u);if(!r.ok)throw new Error(u+': '+r.status);return r.json()}));
-    ({STORES,RULES,ING,RECIPES,ATTR,COOK}=cat);CONV=cat.CONV||{};FLAGS=cat.FLAGS||{};ING_FLAGS=cat.ING_FLAGS||{};TBD=new Set(cat.PACK_TBD||[]);
+    ({STORES,RULES,ING,RECIPES,ATTR,COOK}=cat);CONV=cat.CONV||{};FLAGS=cat.FLAGS||{};ING_FLAGS=cat.ING_FLAGS||{};TBD=new Set(cat.PACK_TBD||[]);UNPRICED=new Set(cat.PANTRY_UNPRICED||[]);
     ({STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR}=cfg);
     PRICES=pr.prices;EST=est.estimates;
     RECIPES.forEach(prepRecipe);
