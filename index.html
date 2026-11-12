@@ -247,7 +247,7 @@ tr.tot td{font-weight:600;border-top:2px solid var(--ink);border-bottom:0}
 
 <script>
 // Catalog and config load from data/*.json at boot (see boot() below)
-let STORES,RULES,ING,PRICES,EST,RECIPES,ATTR,COOK,CONV,FLAGS,ING_FLAGS,STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR;
+let TBD=new Set(),STORES,RULES,ING,PRICES,EST,RECIPES,ATTR,COOK,CONV,FLAGS,ING_FLAGS,STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR;
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const KEY='fare-poc-v3';
@@ -336,10 +336,12 @@ function toPacks(id,qty,unit){
 }
 function prepRecipe(r){
   if(!r.items)return;
-  r.ing={};r.pantry=[];
+  r.ing={};r.pantry=[];r.optional=[];
   r.items.forEach(it=>{
     if(it.pantry){r.pantry.push({name:it.name,unit:it.unit,per:it.qty/r.serves});return}
     if(!ING[it.id])throw new Error(`${r.id} uses unknown ingredient ${it.id}`);
+    // Optional extras are shown with the recipe but not priced or listed yet (prices to be added)
+    if(it.optional){r.optional.push({name:ING[it.id][0],unit:it.unit,per:it.qty/r.serves});return}
     r.ing[it.id]=(r.ing[it.id]||0)+toPacks(it.id,it.qty,it.unit)/r.serves;
   });
 }
@@ -369,7 +371,8 @@ function groceries(){
     if(row.id)need[row.id]=(need[row.id]||0)+row.per*n;
     else if(row.name)extras.push({name:row.name,amt:row.per*n,unit:row.unit||'',recipe:R(id).name});
   })});
-  const items=Object.entries(need).filter(([,q])=>q>0).map(([id,q])=>({id,used:q,packs:Math.max(1,Math.ceil(q-0.05)),d:ING[id]}));
+  // Pack size to add (PACK_TBD): the catalog pack is "1 oz" or "1 fl oz", so you buy and pay for the amount used until a real size is set
+  const items=Object.entries(need).filter(([,q])=>q>0).map(([id,q])=>TBD.has(id)?{id,used:q,packs:Math.round(q*100)/100,tbd:true,d:ING[id]}:{id,used:q,packs:Math.max(1,Math.ceil(q-0.05)),d:ING[id]});
   return {items,extras};
 }
 const sIdx=id=>STORES.findIndex(s=>s.id===id);
@@ -522,6 +525,7 @@ function ingHTML(r){
       <td><button class="btn small" data-delrow="${i}" data-rid="${r.id}" aria-label="Remove ${esc(v.name)}">×</button></td></tr>`}).join('')}
     </tbody></table></div>
     ${r.pantry&&r.pantry.length?`<p class="hint" style="margin:8px 0 0">From your pantry, not on the list: ${r.pantry.map(x=>`${num(x.per*n)} ${esc(x.unit)} ${esc(x.name)}`).join(', ')}.</p>`:''}
+    ${r.optional&&r.optional.length?`<p class="hint" style="margin:4px 0 0">Optional, not priced yet: ${r.optional.map(x=>`${num(x.per*n)} ${esc(x.unit)} ${esc(x.name)}`).join(', ')}.</p>`:''}
     <div class="row" style="margin-top:8px"><button class="btn small" data-addrow="${r.id}">Add ingredient</button><button class="btn small" data-dlrec="${r.id}">Download CSV</button><button class="btn small" data-cprec="${r.id}">Copy</button>${edited?`<button class="btn small" data-reset="${r.id}">Reset to original</button>`:''}</div>
     <p class="hint" style="margin:6px 0 0">Edits change this week's grocery list and stay with the recipe for next time. Amounts scale with your portions.</p>
   </details>`;
@@ -604,8 +608,10 @@ function renderPlan(){
 }
 
 const catOrder=['Produce','Meat & fish','Dairy & eggs','Pantry'];
-function listRows(its){return its.map(it=>[it.store?storeName(it.store):'Any',it.d[1],it.d[0],it.packs,it.d[2],RULES[it.d[3]].label])}
-function listText(title,its){return title+'\n'+catOrder.filter(c=>its.some(it=>it.d[1]===c)).map(c=>c+'\n'+its.filter(it=>it.d[1]===c).map(it=>`- [ ] ${it.d[0]}: ${it.packs} × ${it.d[2]}`).join('\n')).join('\n')}
+const tbdUnit=it=>it.d[2].replace(/^1\s*/,'');
+const qtyTxt=it=>it.tbd?`${num(it.packs)} ${tbdUnit(it)} · pack size to add`:`${it.packs} × ${it.d[2]}`;
+function listRows(its){return its.map(it=>[it.store?storeName(it.store):'Any',it.d[1],it.d[0],it.tbd?num(it.packs):it.packs,it.tbd?tbdUnit(it)+' (pack size to add)':it.d[2],RULES[it.d[3]].label])}
+function listText(title,its){return title+'\n'+catOrder.filter(c=>its.some(it=>it.d[1]===c)).map(c=>c+'\n'+its.filter(it=>it.d[1]===c).map(it=>`- [ ] ${it.d[0]}: ${qtyTxt(it)}`).join('\n')).join('\n')}
 const plural=(n,w)=>`${n} ${w}${n===1?'':'s'}`;
 // Store breakout: each store on its own, real prices only.
 function breakoutHTML(items){
@@ -687,7 +693,7 @@ function renderList(){
   <div class="sechead"><h2>Shopping list</h2><div class="row"><button class="btn small primary" id="cp-all">Copy list</button><button class="btn small" id="dl-all">Download CSV</button></div></div>
   ${allGroups.map(([sid,its])=>{const known=its.filter(it=>it.state==='real');return `<div class="card store"><div class="store-head"><h3>${esc(groupName(sid))}</h3><div class="row"><span class="learned">${sid?`${money(known.reduce((s,it)=>s+lineCost(it),0))} · ${plural(its.length,'item')}`:`No real price at ${pick?'these':'your'} stores yet · ${plural(its.length,'item')}`}</span>${sid?`<button class="btn small" data-cpstore="${sid}">Copy</button>`:'<button class="btn small" data-goprices>Add prices</button>'}</div></div>
     ${catOrder.filter(c=>its.some(it=>it.d[1]===c)).map(c=>`<div class="cat">${c}</div>`+its.filter(it=>it.d[1]===c).map(it=>{const ru=RULES[it.d[3]];return`
-      <div class="item"><div class="nm">${esc(it.d[0])}<span class="qty">${it.packs} × ${esc(it.d[2])}</span></div>
+      <div class="item"><div class="nm">${esc(it.d[0])}<span class="qty">${esc(qtyTxt(it))}</span></div>
       <div class="wh">${priceChip(it)}</div>
       <div class="wh"><span class="rule ${ru.cls}">${ru.label}</span><span>${esc(ru.why)}</span></div>
       ${flagsOf(it.id).map(f=>`<div class="wh"><span class="rule ${f.cls||'r-flag'}">${esc(f.label)}</span><span>${esc(f.why)}</span></div>`).join('')}</div>`}).join('')).join('')}
@@ -729,7 +735,7 @@ function cellHTML(it,sid,low){
 }
 function rowHead(it){
   const p=priceIn(it,[]),st=p.state==='standin'&&!pricedAt(it).length?`<span class="pchip stand">~${money(p.each)}</span>`:!pricedAt(it).length?'<span class="pchip miss">No price</span>':'';
-  return `<b>${esc(it.d[0])}</b><small>per ${esc(it.d[2])}${it.packs?` · buy ${it.packs}`:''}</small>${st?`<small>${st}${p.state==='standin'?' stand-in':''}</small>`:''}${flagsOf(it.id).length?`<small>${flagChips(it.id)}</small>`:''}`;
+  return `<b>${esc(it.d[0])}</b><small>${it.tbd?`per ${esc(tbdUnit(it))} · need ${num(it.packs)} ${esc(tbdUnit(it))} · pack size to add`:`per ${esc(it.d[2])}${it.packs?` · buy ${it.packs}`:''}`}</small>${st?`<small>${st}${p.state==='standin'?' stand-in':''}</small>`:''}${flagsOf(it.id).length?`<small>${flagChips(it.id)}</small>`:''}`;
 }
 function priceForm(it,sid){
   const m=(S.manual[it.id]||{})[sid],sale=salePrice(it.id,sid),ru=RULES[it.d[3]],cur=m||sale;
@@ -916,7 +922,7 @@ renderFb();
 async function boot(){
   try{
     const [cat,cfg,pr,est]=await Promise.all(['data/catalog.json','data/config.json','data/prices.json','data/estimates.json'].map(async u=>{const r=await fetch(u);if(!r.ok)throw new Error(u+': '+r.status);return r.json()}));
-    ({STORES,RULES,ING,RECIPES,ATTR,COOK}=cat);CONV=cat.CONV||{};FLAGS=cat.FLAGS||{};ING_FLAGS=cat.ING_FLAGS||{};
+    ({STORES,RULES,ING,RECIPES,ATTR,COOK}=cat);CONV=cat.CONV||{};FLAGS=cat.FLAGS||{};ING_FLAGS=cat.ING_FLAGS||{};TBD=new Set(cat.PACK_TBD||[]);
     ({STYLES,COMPONENTS,PORTIONS,GOALS,GOAL_TAGS,RESTR}=cfg);
     PRICES=pr.prices;EST=est.estimates;
     RECIPES.forEach(prepRecipe);
