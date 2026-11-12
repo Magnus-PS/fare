@@ -253,7 +253,7 @@ const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const KEY='fare-poc-v3';
 const DEFAULT={profile:{style:'batch',eat:'clean',customEx:[],dinners:5,goals:['muscle','cheap'],restrictions:[],
   members:[{name:'Me',portion:1.67,weight:180},{name:'Partner',portion:1,weight:null},{name:'Daughter',portion:0.67,weight:null}]},
-  plan:null,flex:'new',flexNew:null,approved:false,likes:[],dislikes:[],custom:{},manual:{},sales:{},none:{},shop:{stores:['traderjoes','costco','wildfork','shoprite'],loyal:'',stopValue:8},feedback:[],view:'plan'};
+  plan:null,flex:'new',flexNew:null,approved:false,likes:[],dislikes:[],custom:{},manual:{},sales:{},none:{},shop:{stores:['traderjoes','costco','wildfork','shoprite','wegmans'],loyal:'',stopValue:8},feedback:[],view:'plan'};
 let S;
 try{S=Object.assign(structuredClone(DEFAULT),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=structuredClone(DEFAULT)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -932,6 +932,9 @@ async function boot(){
     const RENAMED={tj:'traderjoes',beef:'grdbeef',potatoes:'whitepotatoes'},ren=id=>RENAMED[id]||id;
     S.shop.stores=[...new Set(S.shop.stores.map(ren))].filter(id=>sIdx(id)>=0);S.shop.loyal=ren(S.shop.loyal);
     Object.values(S.custom).forEach(rows=>rows.forEach(row=>{if(row.id)row.id=ren(row.id)}));if(sIdx(S.shop.loyal)<0)S.shop.loyal='';
+    // A store the catalog gains later is ticked once; unticking it afterwards sticks
+    const seen=S.shop.seen||['traderjoes','costco','wildfork','shoprite'];// the stores before Wegmans (Nov 7)
+    STORES.forEach(s=>{if(!seen.includes(s.id)&&!S.shop.stores.includes(s.id))S.shop.stores.push(s.id)});S.shop.seen=STORES.map(s=>s.id);save();
   }catch(e){
     $('#boot-msg').remove();
     $('#view-'+S.view).hidden=false;
