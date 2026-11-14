@@ -71,7 +71,9 @@ Every observation is logged. A newer receipt for the same store and product repl
 | 2 | Manual entry (shelf price typed in) | Shelf · date | High |
 | 3 | Store's official API (Kroger Product API) | Kroger listing · date | Medium |
 | 4 | Online listing with saved URL | Online estimate | Low to medium |
-| 5 | Median of public averages (BLS, USDA AMS) scaled by store | Typical price | Low |
+| 5 | USDA AMS advertised average, Northeast (stand-in, never a store price) | Stand-in · USDA · period | Low |
+
+**Never a source: LLM-generated prices.** No model may supply, estimate or fill in a price, not even as a stand-in or a hint. An item without a sourced price shows "No price". Enforced by `tests/price-sources.test.mjs` and the PR checklist.
 
 Scraping is excluded: store terms prohibit it, sites break scrapers silently, and the legal position on scraping public pages is unsettled. Revisit only with legal advice and a public product.
 
@@ -137,3 +139,41 @@ Why it can be trusted: the totals check verifies every receipt with no ground tr
 - **Items priced each but sold by weight (Nov 2):** write the count first and the weight after it, e.g. `12 ct (3 lb)` for Costco bananas. Only the count is needed: it sets the price per each, and the weight is kept in `store_pack` for reference. Leave `weight_lb` blank, since that column means the item is priced by weight.
 - **Buying outside the organic rule (Nov 2):** what we actually buy is what the catalog says. An item bought conventional gets the `conv` rule and a flag. A Dirty Dozen item gets the red `dd-not-organic` flag (the TJ gold potatoes); anything else gets the amber `not-organic` flag (TJ steamed beets and sourdough, Costco yogurt, almond flour and sweet potatoes). Wegmans apples (Nov 6) are conventional, so `apples` carries the red flag.
 - **Stubbed lines while we're dinner only (Nov 9):** receipts still record breakfast and lunch buys, but those lines keep a blank `pack` (or `?` when priced by weight), so `add --yes` skips and lists them. Each receipt's "Stubbed" section holds the sizes and sourcing you gave, so moving up to breakfast and lunch means copying them into the table and re-running `add`.
+
+## 12. Live price APIs (scoped Nov 14, 2026; not built)
+
+**Question:** can Fare pull prices for catalog items automatically instead of typing them in? Manual entry, price sheets and receipts stay the main route for store prices. This section scopes an optional add-on.
+
+### Ground rules
+
+- **No scraping.** No scraper services, browser automation against store sites, or unofficial store endpoints, whether or not a vendor wraps them as an "API" (see section 6).
+- **Free and open only.** Only free, public or open data sources. No paid APIs or data vendors.
+- **No LLM prices.** A model never supplies a price, including as a fallback when USDA has no match (section 6). An LLM may *suggest* catalog-to-USDA matches for the mapping file, reviewed in a PR, but never a number.
+
+### What that leaves
+
+None of our five stores (Trader Joe's, Costco, Wild Fork, ShopRite, Wegmans) offers a public price API. Every store "API" on offer is a paid scraper, so store columns stay manual. A free, open source can still replace the placeholder **stand-ins**:
+
+| Source | What it gives | Use |
+|---|---|---|
+| **USDA AMS National Retail Reports** (Market News, free public API) | Weekly *advertised* retail prices by region, with organic series. Separate reports for specialty crops (produce), dairy, and meat, poultry and eggs | **Primary.** Stand-ins in `data/estimates.json` |
+| Open Prices (Open Food Facts, open data) | Crowd-sourced prices | Too thin in the US today. Later, Fare could contribute its own prices |
+| Instacart Developer Platform (free key) | A shopping-list link on Instacart; no price data | Not a price source. Phase 3 ordering hand-off only |
+
+Kroger's free Product API has store-level prices, but no Kroger store is on our list. Flipp needs a partner agreement. Both are out of scope.
+
+### Region
+
+We're in Monmouth County, NJ. The produce and dairy retail reports use six regions: **Northeast** (CT, DE, MA, MD, ME, NH, NJ, NY, PA, RI, VT), Southeast, Midwest, South Central, Southwest and Northwest, plus Alaska, Hawaii and a national figure. The meat and poultry reports use three regions (Northeast, South, West); New Jersey is in the Northeast in both schemes. **Use Northeast only.** If the Northeast has no observation for an item, the item shows "No price" (decided Nov 14). No national figure, no BLS, no LLM.
+
+### Feature: USDA stand-ins
+
+1. **Tool.** `tools/usda-estimates.mjs` (Node `fetch`, no new dependencies) is run by hand **monthly**. Quarterly is fine if nothing has changed much. It pulls the Northeast averages for the refresh period from the produce, dairy, and meat, poultry and egg reports. Items with no Northeast observation get no estimate and show "No price".
+2. **Mapping.** `data/usda-map.json` is reviewed in a PR like any catalog change. It maps each catalog id to a USDA commodity, its unit (per lb, each, per dozen) and its series (organic or conventional). Organic follows the item's rule: Dirty Dozen and `org` items use the organic series, Clean 15 and `conv` the conventional one. An item with no clean match gets no estimate. The tool never guesses.
+3. **Output.** The tool rewrites `data/estimates.json`. Each entry converts to the catalog pack with the existing pack rules and records `source` ("USDA AMS advertised average, Northeast, <period>"), `as_of` and the USDA unit price used. A run prints what changed, plus the mapped items with no data, for review before committing.
+4. **In the app.** A note sits at the top wherever stand-ins count (the Prices tab and the grocery list's dinner cost card): *"Stand-ins are USDA advertised averages for the Northeast, updated monthly. Advertised prices lean toward sales, so they may understate what you'll pay. Real store prices replace them."* The stand-in chip's tooltip names the source and period.
+5. **Unchanged.** Stand-ins never fill a store column, never pick a route and never count as real prices. They appear only in week and meal costs, as today.
+
+**Effort and cost:** one session for produce and the mapping file; a second for dairy, meat and eggs. $0 a month, with no keys to manage beyond what the free APIs require.
+
+**Decided (Nov 14):** USDA Northeast or "No price", nothing in between. The first USDA run removes the old prototype placeholders from `data/estimates.json`; until then the price-source test allows them by their exact source text. LLM-generated prices are blocked in the product and at PR merge (test plus checklist).
