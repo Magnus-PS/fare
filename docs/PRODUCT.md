@@ -37,7 +37,7 @@ It starts as Magnus's own weekly routine, systematized. If it saves him an hour 
 2. **Organic by default, conventional when it doesn't matter.** Dirty Dozen and anything not on a list: organic. Clean 15: conventional is fine, and we say so (that's where the savings come from). A Dirty Dozen item we actually buy conventional stays in the catalog with a red flag, so the break from the rule is always visible. Meat and fish: wild-caught, pasture-raised, grass-fed.
 3. **Every recommendation has a "why".** One line, plain language, on every meal and every grocery item. Distinguish *evidence* ("Dirty Dozen: highest pesticide residue in USDA testing") from *preference* ("we prefer grass-fed for animal welfare and fat profile"). Credibility is the product.
 4. **Recommend, then listen.** Fare proposes; the person swaps, thumbs-down, or overrides. Every override is a signal that improves next week.
-5. **Rules are code, taste is the LLM.** Prices, food rules, store routing and macros are deterministic. The LLM only chooses among pre-approved recipes and writes the why. It can't invent a food we wouldn't sell or a price that doesn't exist.
+5. **Rules are code, taste is the LLM.** Prices, food rules, store routing and macros are deterministic. The LLM only chooses among pre-approved recipes and writes the why. It can't invent a food we wouldn't sell or a price that doesn't exist. **The LLM never supplies a price**, not even as a stand-in or fallback: a price comes from a receipt, a shelf entry, an official store API or USDA data, or the item shows "No price" (Nov 14; enforced by `tests/price-sources.test.mjs`).
 6. **Less thought.** Defaults for everything. Onboarding in under 2 minutes. The weekly loop is: open, glance, approve, shop.
 
 ---
@@ -172,8 +172,8 @@ Each stage finishes before the next starts. Dinner only throughout.
 - **Recipe view with cooking steps** (future, wanted): show a full recipe with its method, download it (likely a PDF with ingredients and simple steps; decided Nov 9 to wait until the background logic is in place, so recipes stay Markdown-only with no source field until then), and take live feedback while cooking ("too salty", "needed 20 more minutes") so the recipe improves and adapts over time. Steps are kept in the `local/recipes/` drafts until then; the catalog has no steps field yet
 
 ### Phase 3: Public-ready
-- Real price data (Kroger has a public product API; others via receipts and crowd-sourced price logs)
-- Online ordering hand-off (Instacart / store cart links)
+- Real price data: none of our five stores has a public price API (scoped Nov 14, [RECEIPTS.md](RECEIPTS.md) section 12). Candidate: USDA AMS advertised averages for the Northeast (NJ's region), refreshed monthly, as dated stand-ins in `data/estimates.json`, with a note that they may understate shelf prices; no Northeast match means "No price". No scraping; free and open sources only; never LLM-generated prices. Store prices stay manual, sheets and receipts
+- Online ordering hand-off (Instacart Developer Platform shopping-list link; Costco, Wegmans and ShopRite sell through Instacart, which shows live prices there)
 - Bring-your-own recipes with automatic rule checks
 - Pricing model, if any (a small subscription covers LLM and data costs)
 

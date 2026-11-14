@@ -1,0 +1,19 @@
+# Runs on every PR to main. The price-source test blocks LLM-provided prices (see CLAUDE.md).
+name: checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate data JSON
+        run: for f in data/*.json; do python3 -m json.tool "$f" > /dev/null || exit 1; done
+      - name: Tests (price tools and price sources)
+        run: node --test
