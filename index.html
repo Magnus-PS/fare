@@ -253,7 +253,7 @@ const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const KEY='fare-poc-v3';
 const DEFAULT={profile:{style:'batch',eat:'clean',customEx:[],dinners:5,goals:['muscle','cheap'],restrictions:[],
   members:[{name:'Me',portion:1.67,weight:180},{name:'Partner',portion:1,weight:null},{name:'Daughter',portion:0.67,weight:null}]},
-  plan:null,flex:'new',flexNew:null,approved:false,likes:[],dislikes:[],custom:{},manual:{},sales:{},none:{},shop:{stores:['traderjoes','costco','wildfork','shoprite','wegmans'],loyal:'',stopValue:8},feedback:[],view:'plan'};
+  plan:null,flex:'new',flexNew:null,approved:false,likes:[],dislikes:[],custom:{},manual:{},sales:{},none:{},priceScope:'all',shop:{stores:['traderjoes','costco','wildfork','shoprite','wegmans'],loyal:'',stopValue:8},feedback:[],view:'plan'};
 let S;
 try{S=Object.assign(structuredClone(DEFAULT),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=structuredClone(DEFAULT)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -732,7 +732,20 @@ function renderList(){
 // Prices tab: one row per dinner item, one column per store. Goals: one real price per item, then two competing prices.
 let priceEdit=null; // the open price form: {id,sid}
 let pendingSheet=null; // uploaded sheets waiting for "Save"
-const spendOf=it=>{const p=priceIn(it,S.shop.stores);return p.each==null?0:p.each*it.packs};
+// Which items the Prices tab covers: this week's plan, or every priced item in all dinner recipes (to see everything still
+// needing a price). Optional items, pantry:true items and pantry staples (PANTRY_UNPRICED) are never priced, so never listed.
+const shortName=r=>r.name.replace(/\s*\([^)]*\)/g,'');
+function usedIn(ids){const m={};ids.forEach(rid=>Object.keys(R(rid).ing||{}).forEach(id=>{(m[id]=m[id]||[]).push(shortName(R(rid)))}));return m}
+function allDinnerItems(){
+  const m=usedIn(RECIPES.filter(r=>r.items).map(r=>r.id));
+  return Object.keys(m).filter(id=>!UNPRICED.has(id)).map(id=>({id,used:0,packs:0,tbd:TBD.has(id),d:ING[id],uses:m[id]}));
+}
+function priceItems(){
+  if(S.priceScope==='all')return allDinnerItems();
+  const {items}=groceries(),m=usedIn(dinnerIds());items.forEach(it=>it.uses=m[it.id]||[]);return items;
+}
+// Price-next order within a goal: this week, the biggest spend first; across all dinners, the items most recipes use first.
+const spendOf=it=>{if(S.priceScope==='all')return it.uses.length;const p=priceIn(it,S.shop.stores);return p.each==null?0:p.each*it.packs};
 const goalDone=it=>{const n=pricedAt(it).length;return n>=2||(n>=1&&S.shop.stores.filter(s=>sells(s,it)).length===n)};
 const salePrice=(id,sid)=>(S.sales[id]||{})[sid]||null;
 // Per oz or per count, so different packs read on one scale. Null for items like "head" or "bunch".
@@ -749,7 +762,7 @@ function cellHTML(it,sid,low){
 }
 function rowHead(it){
   const p=priceIn(it,[]),st=p.state==='standin'&&!pricedAt(it).length?`<span class="pchip stand">~${money(p.each)}</span>`:!pricedAt(it).length?'<span class="pchip miss">No price</span>':'';
-  return `<b>${esc(it.d[0])}</b><small>${it.tbd?`per ${esc(tbdUnit(it))} · need ${num(it.packs)} ${esc(tbdUnit(it))} · pack size to add`:`per ${esc(it.d[2])}${it.packs?` · buy ${it.packs}`:''}`}</small>${st?`<small>${st}${p.state==='standin'?' stand-in':''}</small>`:''}${flagsOf(it.id).length?`<small>${flagChips(it.id)}</small>`:''}`;
+  return `<b>${esc(it.d[0])}</b><small>${it.tbd?`per ${esc(tbdUnit(it))}${it.packs?` · need ${num(it.packs)} ${esc(tbdUnit(it))}`:''} · pack size to add`:`per ${esc(it.d[2])}${it.packs?` · buy ${it.packs}`:''}`}</small>${it.uses&&it.uses.length?`<small class="uses" title="${esc(it.uses.join(', '))}">Used in ${it.uses.length>3?`${it.uses.length} dinners`:esc(it.uses.join(', '))}</small>`:''}${st?`<small>${st}${p.state==='standin'?' stand-in':''}</small>`:''}${flagsOf(it.id).length?`<small>${flagChips(it.id)}</small>`:''}`;
 }
 function priceForm(it,sid){
   const m=(S.manual[it.id]||{})[sid],sale=salePrice(it.id,sid),ru=RULES[it.d[3]],cur=m||sale;
@@ -880,19 +893,25 @@ function sheetPreview(p){
 }
 function renderPrices(){
   ensurePlan();
-  const {items}=groceries(),ids=S.shop.stores,V=$('#view-prices');
-  const head=`<div><h2>Prices</h2><p class="lede">No receipt or purchase needed. First get one real price for every dinner item, then two from competing stores.</p></div>`;
-  if(!ids.length){V.innerHTML=head+`<div class="card"><p class="empty" style="margin:0">Pick your stores on List &amp; stores first.</p></div>`;return}
+  const all=S.priceScope==='all',items=priceItems(),ids=S.shop.stores,V=$('#view-prices');
+  const nRec=RECIPES.filter(r=>r.items).length;
+  const scope=`<div class="chips" role="radiogroup" aria-label="Which items">${[['week','This week'],['all',`All ${nRec} dinners`]].map(([v,l])=>`<label class="chip"><input type="radio" name="pscope" value="${v}" ${S.priceScope===v?'checked':''}>${l}</label>`).join('')}</div>`;
+  const head=`<div><h2>Prices</h2><p class="lede">No receipt or purchase needed. First get one real price for every dinner item, then two from competing stores.</p>${scope}
+    <p class="hint" style="margin:8px 0 0">${all?`Every item that any of your ${nRec} dinner recipes needs: ${plural(items.length,'item')}.`:`Items in this week's plan: ${plural(items.length,'item')}.`} Optional items and pantry staples aren't priced.</p></div>`;
+  const bindScope=()=>V.querySelectorAll('input[name=pscope]').forEach(r=>r.onchange=()=>{S.priceScope=r.value;priceEdit=null;save();render()});
+  if(!ids.length){V.innerHTML=head+`<div class="card"><p class="empty" style="margin:0">Pick your stores on List &amp; stores first.</p></div>`;bindScope();return}
   const order=[...items].sort((a,b)=>pricedAt(a).length-pricedAt(b).length||spendOf(b)-spendOf(a));
   const one=items.filter(it=>pricedAt(it).length>=1).length,two=items.filter(goalDone).length,only=items.filter(it=>goalDone(it)&&pricedAt(it).length===1).length;
   const next=(one<items.length?order.filter(it=>!pricedAt(it).length):order.filter(it=>!goalDone(it))).slice(0,3);
   const goal=(label,n,note='')=>`<div class="goal"><div class="spread"><span>${label}</span><span class="money">${n} of ${items.length}</span></div><span class="meter big" role="img" aria-label="${n} of ${items.length}"><i class="s-real" style="width:${n/(items.length||1)*100}%"></i></span>${note?`<small class="sub">${note}</small>`:''}</div>`;
   const progress=`<div class="card"><p class="label">Price goals</p><div class="goals">${goal('One real price per item',one)}${goal('Two competing prices per item',two,only?`Includes ${only} that only one of your stores sells.`:'')}</div>
-    ${next.length?`<p style="margin:12px 0 0"><b>Price next:</b> ${next.map(it=>esc(it.d[0])).join(', ')}</p>`:'<p style="margin:12px 0 0"><b>Both goals are met for this week\'s dinners.</b></p>'}</div>`;
+    ${next.length?`<p style="margin:12px 0 0"><b>Price next:</b> ${next.map(it=>esc(it.d[0])).join(', ')}</p>`:`<p style="margin:12px 0 0"><b>Both goals are met for ${all?'all dinners':'this week\'s dinners'}.</b></p>`}</div>`;
   const sheets=`<div class="card" style="display:grid;gap:12px"><div><p class="label">Price sheets</p><p class="hint" style="margin:0">Download a store's sheet, import it into Google Sheets and fill in price, pack, on_sale, none_here and seen_on. Then use File &gt; Download &gt; CSV and upload it here.</p></div>
     <div class="row">${ids.map(s=>`<button class="btn small" data-sheet="${s}">${esc(storeName(s))} sheet</button>`).join('')}<label class="btn small primary" for="sheet-up">Upload sheets</label><input class="sr" id="sheet-up" type="file" accept=".csv,text/csv" multiple></div>
     ${pendingSheet?sheetPreview(pendingSheet):''}</div>`;
-  V.innerHTML=head+progress+sheets+tableHTML(order,ids)+`<div class="card">${breakoutHTML(items)}</div><div class="card">${weekHTML(items,ids)}</div>`;
+  // Store totals and the week's cost need quantities, so they only show for this week's plan
+  V.innerHTML=head+progress+sheets+tableHTML(order,ids)+(all?'':`<div class="card">${breakoutHTML(items)}</div><div class="card">${weekHTML(items,ids)}</div>`);
+  bindScope();
   V.querySelectorAll('[data-cell]').forEach(b=>b.onclick=()=>{const c={id:b.dataset.cell,sid:b.dataset.sid};priceEdit=priceEdit&&priceEdit.id===c.id&&priceEdit.sid===c.sid?null:c;render()});
   V.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>saveFile(`fare-prices-${b.dataset.sheet}.csv`,sheetFor(b.dataset.sheet,items)));
   $('#sheet-up').onchange=e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)uploadSheets(fs)};
