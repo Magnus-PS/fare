@@ -302,8 +302,12 @@ function buildPlan(){
   const pick=[],used=new Set(),n=isBatch()?3:S.profile.dinners;
   for(const r of candidates([],planOk)){if(pick.length>=n)break;if(!used.has(protein(r))){pick.push(r.id);used.add(protein(r))}}
   for(const r of candidates(pick,planOk)){if(pick.length>=n)break;pick.push(r.id)}
-  S.plan=pick;S.flexNew=isBatch()?(freshPick([])||{}).id||null:null;S.approved=false;save();
+  S.plan=pick;S.flexNew=isBatch()?(freshPick([])||{}).id||null:null;S.approved=false;S.planFor=planKey();save();
 }
+// The plan follows the profile: it is rebuilt when the choices that pick recipes change, or when the catalog gains or loses
+// recipes. Swaps, likes and skips don't change the key, so they survive moving between tabs.
+const planKey=()=>{const p=S.profile;return JSON.stringify([p.style,p.eat,p.customEx,p.dinners,p.goals,p.restrictions,RECIPES.map(r=>r.id)])};
+function ensurePlan(){if(!S.plan||!S.plan.length||S.planFor!==planKey())buildPlan()}
 function swapFlex(dislike){
   const cur=S.flexNew;
   if(dislike&&cur&&!S.dislikes.includes(cur)){S.dislikes.push(cur);S.likes=S.likes.filter(x=>x!==cur)}
@@ -571,12 +575,13 @@ function batchHTML(meals,wk){
 }
 
 function renderPlan(){
-  if(!S.plan)buildPlan();
+  ensurePlan();
   const meals=S.plan.map(R),n=meals.length||1,avg=k=>Math.round(meals.reduce((s,r)=>s+r[k],0)/n);
   const wk=weekOf(),P=portions();
   $('#view-plan').innerHTML=`
   <div class="spread"><div><h2>Week of ${fmtDate(wk)}</h2><p class="lede">${isBatch()?`Cook ${plural(S.plan.length,'recipe')} once and reheat them for 6 dinners; Sunday is your flex night`:`${S.plan.length} dinners`}. Meal size is ${portionsTxt(P)} standard portions (${S.profile.members.map(m=>esc(m.name)+' '+m.portion+'×').join(', ')}).</p></div>
-  <div class="row"><span class="status ${S.approved?'ok':''}">${S.approved?'Approved':'Draft'}</span><button class="btn primary" id="approve">${S.approved?'View grocery list':'Approve plan'}</button></div></div>
+  <div class="row"><span class="status ${S.approved?'ok':''}">${S.approved?'Approved':'Draft'}</span><button class="btn" id="rebuild" title="Pick fresh recipes from your profile; keeps likes and skips">Rebuild from profile</button><button class="btn primary" id="approve">${S.approved?'View grocery list':'Approve plan'}</button></div></div>
+  <p class="hint" style="margin:0">Picked from the ${RECIPES.filter(r=>r.items&&allowed(r)&&!S.dislikes.includes(r.id)).length} of ${RECIPES.length} recipes that fit your profile. <a href="#profile" data-goprofile>Change profile</a></p>
   <div class="card"><p class="label">This week's guidelines</p><ul class="guides">${guidelines(meals).map(t=>`<li><span>${esc(t)}</span></li>`).join('')}</ul>
     <p class="label" style="margin:16px 0 0">Estimated average per standard dinner portion</p>
     <div class="macros" style="margin-top:6px">
@@ -608,6 +613,8 @@ function renderPlan(){
   V.querySelectorAll('[data-dlrec]').forEach(b=>b.onclick=()=>saveFile('fare-'+slug(R(b.dataset.dlrec).name)+'.csv',toCSV([head,...recipeRowsOut(b.dataset.dlrec)])));
   V.querySelectorAll('[data-cprec]').forEach(b=>b.onclick=()=>{const id=b.dataset.cprec;copyText(R(id).name+` (${portionsTxt(recipePortions(id))} portions)\n`+recipeRowsOut(id).map(r=>`- ${r[2]} ${r[3]} ${r[1]}${r[4]?' ('+r[4]+')':''}`).join('\n'))});
   $('#approve').onclick=()=>{S.approved=true;save();go('list')};
+  $('#rebuild').onclick=()=>{buildPlan();render()};
+  V.querySelectorAll('[data-goprofile]').forEach(a=>a.onclick=e=>{e.preventDefault();go('profile')});
   const f=$('#forget');if(f)f.onclick=()=>{S.likes=[];S.dislikes=[];save();render()};
 }
 
@@ -645,7 +652,7 @@ const priceChip=it=>it.state==='real'?`<span class="pchip real">${money(it.each)
   :`<span class="pchip miss">No price</span>`;
 
 function renderList(){
-  if(!S.plan)buildPlan();
+  ensurePlan();
   const {items,extras,staples}=groceries(),sh=S.shop,P=portions();
   const compared=items.filter(it=>pricedAt(it).length>=2);
   const unlocked=compared.length>0&&compared.length>=items.length*ROUTE_MIN;
@@ -872,7 +879,7 @@ function sheetPreview(p){
     <div class="row" style="margin-top:10px">${n?`<button class="btn small primary" id="sheet-save">Save ${plural(n,'row')}</button>`:''}<button class="btn small" id="sheet-cancel">${n?'Cancel':'Close'}</button></div></div>`;
 }
 function renderPrices(){
-  if(!S.plan)buildPlan();
+  ensurePlan();
   const {items}=groceries(),ids=S.shop.stores,V=$('#view-prices');
   const head=`<div><h2>Prices</h2><p class="lede">No receipt or purchase needed. First get one real price for every dinner item, then two from competing stores.</p></div>`;
   if(!ids.length){V.innerHTML=head+`<div class="card"><p class="empty" style="margin:0">Pick your stores on List &amp; stores first.</p></div>`;return}
