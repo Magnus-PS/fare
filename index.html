@@ -114,6 +114,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .summary div b{display:block;font:500 24px var(--mono);font-variant-numeric:tabular-nums}
 .summary div span{font-size:13px;color:var(--muted)}
 .tablewrap{overflow-x:auto;position:relative}
+.ptablewrap{max-height:75vh;overflow:auto}
+.ptable thead th{position:sticky;top:0;z-index:2;background:var(--surface);box-shadow:0 1px 0 var(--line)}
+.ptable thead th:first-child{z-index:3}
+.ptable tr.aisle th{max-width:none;min-width:0;box-shadow:none;position:sticky;left:0;text-align:left;font:600 12px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding-top:16px;background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
@@ -253,7 +257,7 @@ const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const KEY='fare-poc-v3';
 const DEFAULT={profile:{style:'batch',eat:'clean',customEx:[],dinners:5,goals:['muscle','cheap'],restrictions:[],
   members:[{name:'Me',portion:1.67,weight:180},{name:'Partner',portion:1,weight:null},{name:'Daughter',portion:0.67,weight:null}]},
-  plan:null,flex:'new',flexNew:null,approved:false,likes:[],dislikes:[],custom:{},manual:{},sales:{},none:{},priceScope:'all',shop:{stores:['traderjoes','costco','wildfork','shoprite','wegmans'],loyal:'',stopValue:8},feedback:[],view:'plan'};
+  plan:null,flex:'new',flexNew:null,approved:false,likes:[],dislikes:[],custom:{},manual:{},sales:{},none:{},priceScope:'all',shop:{stores:['traderjoes','costco','wildfork'],loyal:'',stopValue:8},feedback:[],view:'plan'};
 let S;
 try{S=Object.assign(structuredClone(DEFAULT),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=structuredClone(DEFAULT)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -923,10 +927,12 @@ function renderPrices(){
   bindPriceForm();
 }
 function tableHTML(order,ids){
-  return `<div class="card"><p class="label">Item by store</p><div class="tablewrap"><table class="ptable"><thead><tr><th>Item</th>${ids.map(s=>`<th>${esc(storeName(s))}</th>`).join('')}</tr></thead><tbody>
-    ${order.map(it=>{const pr=pricedAt(it,ids),low=pr.length>1?Math.min(...pr.map(s=>priceAt(it,s).price)):null,open=priceEdit&&priceEdit.id===it.id&&ids.includes(priceEdit.sid);
-      return `<tr><td class="ihead">${rowHead(it)}</td>${ids.map(s=>{const p=priceAt(it,s);return cellHTML(it,s,low!=null&&p&&p.price===low)}).join('')}</tr>${open?`<tr><td colspan="${ids.length+1}" class="formcell"><div class="formwrap">${priceForm(it,priceEdit.sid)}</div></td></tr>`:''}`}).join('')}
-  </tbody></table></div></div>`;
+  // Grouped by aisle so a store's items sit together (Wild Fork only stocks Meat & fish); within an aisle, unpriced first
+  const row=it=>{const pr=pricedAt(it,ids),low=pr.length>1?Math.min(...pr.map(s=>priceAt(it,s).price)):null,open=priceEdit&&priceEdit.id===it.id&&ids.includes(priceEdit.sid);
+      return `<tr><td class="ihead">${rowHead(it)}</td>${ids.map(s=>{const p=priceAt(it,s);return cellHTML(it,s,low!=null&&p&&p.price===low)}).join('')}</tr>${open?`<tr><td colspan="${ids.length+1}" class="formcell"><div class="formwrap">${priceForm(it,priceEdit.sid)}</div></td></tr>`:''}`};
+  const aisles=catOrder.filter(c=>order.some(it=>it.d[1]===c)).map(c=>{const its=order.filter(it=>it.d[1]===c),n=its.filter(it=>pricedAt(it,ids).length).length;
+    return `<tr class="aisle"><th colspan="${ids.length+1}">${esc(c)} · ${n} of ${its.length} priced</th></tr>`+its.map(row).join('')}).join('');
+  return `<div class="card"><p class="label">Item by store</p><div class="tablewrap ptablewrap"><table class="ptable"><thead><tr><th>Item</th>${ids.map(s=>`<th>${esc(storeName(s))}</th>`).join('')}</tr></thead><tbody>${aisles}</tbody></table></div></div>`;
 }
 function bindShop(){
   document.querySelectorAll('input[name=store]').forEach(c=>c.onchange=()=>{
